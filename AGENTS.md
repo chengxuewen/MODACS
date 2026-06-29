@@ -1,0 +1,267 @@
+# PROJECT KNOWLEDGE BASE
+
+**Generated:** 2026-06-29
+**Version:** 0.1.1.1 (from `version.txt`)
+**Git:** No commits yet — scaffold stage
+
+## OVERVIEW
+
+MODACS is a dual-stack robotics control platform: an existing C++17/Qt5.15/ROS2 Jazzy remote control station (MSRCS) with build infrastructure in place, plus a planned TypeScript/Node.js multi-process web platform (Hono + React + Drizzle + PostgreSQL). No application source code exists yet — only build scripts, AI agent rules, docs, and environment configs.
+
+## STRUCTURE
+
+```
+MODACS/
+├── .agents/           # AI rules + skills (first-class project artifacts)
+│   ├── rules/         # Coding standards, security, testing, workflows
+│   │   ├── common/    # Language-agnostic rules
+│   │   ├── cpp/       # C++17/Qt/ROS2 extensions
+│   │   ├── typescript/# TS/JS extensions
+│   │   └── zh/        # Chinese translations
+│   └── skills/        # Deep reference: cpp-coding-standards, cpp-testing, qt-*, openspec-*
+├── .opencode/         # OpenCode AI IDE config (opencode.json, AI_CONFIG.md, MODEL_TIERS.md)
+├── scripts/           # 11 shell scripts: build, env, pixi, pack, deploy
+├── docs/              # 11 architecture & design docs (platform, cluster, vision, act, link, naming, MES, etc.)
+├── changes/           # Changelog files (changes-0.1.1.txt)
+├── bootstrap.sh       # One-shot env setup → calls scripts/pixi-init.sh
+├── turbo.json         # Turborepo config (planned JS monorepo tasks)
+├── version.txt        # Semantic version (currently 0.1.1.1)
+└── SKILL.md           # AI skill registry (superpowers + project skills)
+```
+
+## WHERE TO LOOK
+
+| Task | Location | Notes |
+|------|----------|-------|
+| Env setup (first time) | `bootstrap.sh` | Installs pixi 0.67.2 + deps |
+| Build C++/ROS2 | `scripts/build.sh` | colcon + Ninja, default pkg `ms_rcs` |
+| Build with debug | `scripts/build.sh --debug` | CMAKE_BUILD_TYPE=Debug |
+| Selective build | `scripts/build.sh --packages select <pkg>` | |
+| Package for deploy | `scripts/pack.sh` | pixi-pack + npm tar |
+| Runtime install | `scripts/install.sh` | Extracts packed env |
+| Enter runtime shell | `source scripts/env-source.sh` | Loads ROS2 + pixi env |
+| Fast-DDS + SHM | `source scripts/env-fastdds.sh` | RMW=rmw_fastrtps_cpp |
+| Generate compile_commands.json | `scripts/gen-compile-db.sh` | For clangd LSP |
+| TS platform spec | `docs/MODACS-AI-Dev.md` | AI coding rules, tech stack, code templates (788 lines) |
+| Project overview | `docs/MODACS-Overview.md` | Top-level: vision, architecture, roadmap, decisions (462 lines) |
+| Platform architecture | `docs/MODACS-Platform.md` | Odoo-style modular platform: multi-process, plugin lifecycle, UI isolation (1751 lines) |
+| Development guide | `docs/MODACS-Platform-Dev.md` | Vertical slice implementation with TypeScript code templates (3860 lines) |
+| Cluster architecture | `docs/MODACS-Cluster.md` | Multi-node cluster, app version management (710 lines) |
+| Open-source reference | `docs/MODACS-Platform-Ref.md` | CasaOS/Runtipi/1Panel/NocoBase/Odoo/n8n comparison (1294 lines) |
+| Vision product | `docs/MODACS-Vision.md` | Video monitoring + AI analysis platform (Rust/dora-rs, 547 lines) |
+| Act product | `docs/MODACS-Act.md` | Execution layer: soft PLC, CNC, DCS (Rust/dora-rs, 97 lines) |
+| Link middleware | `docs/MODACS-Link.md` | Middleware abstraction for Podman-isolated modules (Rust/dora-rs, 570 lines) |
+| Naming whitepaper | `docs/MODACS-Naming.md` | Brand architecture, trademark analysis, product family naming (250 lines) |
+| MES development plan | `docs/MES-Development-Plan.md` | First MES app: tech selection, architecture, 28-week roadmap (510 lines) |
+| AI dev workflow | `.opencode/AI_CONFIG.md` | 7-stage pipeline, agent roles |
+| Model tiers | `.opencode/MODEL_TIERS.md` | premium-max/premium/fast/vision/lite |
+| Skills registry | `SKILL.md` | Superpowers + project skills mapping |
+| Coding rules | `.agents/rules/` | common/ + cpp/ + typescript/ |
+| C++ testing ref | `.agents/skills/cpp-testing.md` | GoogleTest patterns, TDD, sanitizers |
+| Qt review checklists | `.agents/skills/qt-cpp-review/references/` | 271-line C++ + 490-line QML |
+
+## CONVENTIONS
+
+### Naming (from MODACS-AI-Dev.md)
+- Files: `kebab-case` (e.g., `work-order.ts`)
+- Classes: `PascalCase`
+- Functions/variables: `camelCase`
+- Constants: `UPPER_SNAKE_CASE`
+- DB schema: `{module}_{table}` (e.g., `mes_work_orders`)
+- API paths: `/api/{collection}:{action}` (NOT REST style)
+  - ✅ `/api/work-orders:list` `/api/work-orders:create` `/api/work-orders:get?id=123`
+
+### C++ (from .agents/rules/cpp/)
+- Standard: C++17 (project config says C++17; rules also reference C++20/23 features)
+- Qt: 5.15 (skills target Qt6 but project uses 5.15)
+- ROS2: Jazzy
+- Build: colcon + Ninja, `--merge-install`, `BUILD_TESTING=OFF`
+- Memory: RAII everywhere — no raw `new`/`delete`, use `std::unique_ptr`/`std::make_unique`
+- Format: clang-format (no config file yet — create one)
+- LSP: clangd (compile_commands.json generated by `gen-compile-db.sh`)
+
+### TypeScript (from .agents/rules/typescript/ + MODACS-AI-Dev.md)
+- Runtime: Node.js 24 LTS (❌ no Bun proprietary APIs)
+- Package: pnpm workspaces (❌ no npm/yarn/bun install)
+- Web: Hono ^4 (❌ no Express/Fastify/Koa)
+- ORM: Drizzle ^0.36 (❌ no Prisma/Sequelize/TypeORM)
+- DB: PostgreSQL 16+ (❌ no SQLite/MySQL)
+- Frontend: React 19 + shadcn/ui + Tailwind CSS v4
+- State: Zustand ^5 (❌ no Redux/Jotai)
+- Data: TanStack Query ^5 (❌ no SWR)
+- Build: esbuild (❌ no webpack/rollup)
+- Test: vitest + Playwright (❌ no Jest)
+- Validation: Zod ^3
+- UDS transport: undici ^7 (❌ no node-fetch/axios)
+
+### Architecture Constraints (MODACS-AI-Dev.md §3)
+- **Multi-process**: Base process (Node.js) manages plugin subprocesses via fork
+- **Communication**: JSON-RPC 2.0 over UDS (Unix Domain Sockets) — JSON only
+- **Allowed patterns**: req/rep (HTTP POST over UDS), pub/sub (fan-out), streaming (SSE + Zenoh v2)
+- **Prohibited**: ZMQ, NNG, gRPC streams, Redis, cross-node transparent RPC
+- **Plugins**: Independent child processes, no direct DB access (RPC to base process)
+- **UI isolation**: 3 layers — UIAdapter interface → platform composite components → Field Interface registry
+- **Module code**: Only import from `@modacs/ui` — never `shadcn/ui` or `@radix-ui/*` directly
+
+### File Organization
+- 200-400 lines typical, 800 max
+- Functions <50 lines
+- Nesting max 4 levels (use early returns)
+- Many small files > few large files
+- Immutability: always create new objects, never mutate (CRITICAL)
+
+## ANTI-PATTERNS (THIS PROJECT)
+
+### Explicitly Forbidden (MODACS-AI-Dev.md §8)
+- ❌ Bun proprietary APIs (`Bun.serve`, `Bun.spawn`, `http://unix:` pattern)
+- ❌ SQLite (use PostgreSQL)
+- ❌ Child processes connecting DB directly (use UDS RPC to base)
+- ❌ Module code importing `shadcn/ui` or `@radix-ui/*` directly
+- ❌ Redis (fan-out is sufficient)
+- ❌ ZMQ / NNG / gRPC
+- ❌ Message format switching (JSON only — no MessagePack/Arrow/Protobuf)
+- ❌ Cross-node transparent RPC (cluster uses HTTP API)
+- ❌ REST-style API paths (use `/api/{collection}:{action}`)
+- ❌ `console.log` for logging (use unified logger — stdout conflicts in subprocesses)
+- ❌ Forgetting socket file cleanup (unlink old socket on startup)
+- ❌ Writing tests in Slice 1 / Spike phase (interfaces unstable)
+- ❌ `import { fetch } from 'undici'` (Node.js built-in fetch can't do UDS — use `new Client`)
+- ❌ Plugin code connecting PostgreSQL directly (must go through RPC Hub → base)
+
+### C++ Anti-Patterns (.agents/rules/cpp/ + skills)
+- ❌ Raw `new`/`delete` — use smart pointers
+- ❌ C-style arrays (`int buf[256]`) — use `std::array`/`std::vector`
+- ❌ C strings (`strcpy`, `strcat`, `sprintf`) — use `std::string`
+- ❌ `malloc`/`free` — use C++ allocation
+- ❌ `reinterpret_cast` unless absolutely necessary
+- ❌ `std::auto_ptr` (removed in C++11)
+- ❌ `return std::move(result)` — blocks RVO/NRVO
+- ❌ Uninitialized variables
+- ❌ Signed integer overflow (UB)
+
+### Qt Anti-Patterns (from review checklists)
+- ❌ `Q_FOREACH` — use range-based for (`QT_NO_FOREACH`)
+- ❌ Java-style iterators — use STL iterators
+- ❌ `QScopedPointer` — use `std::unique_ptr`
+- ❌ `QSharedPointer`/`QWeakPointer` — use `std::shared_ptr`/`std::weak_ptr` (2× atomic ops)
+- ❌ `QPair` — use `std::pair`
+- ❌ `std::optional::value()` — use `*opt` or `opt->foo`
+- ❌ Side effects inside `Q_ASSERT`
+- ❌ Mutating `QAbstractItemModel` from background threads
+- ❌ Emitting signals from worker threads with `DirectConnection` to main thread
+- ❌ Constructing `QRegularExpression` inside loops
+- ❌ `QMap` for small fixed-size constant data
+
+### QML Anti-Patterns (from review checklists)
+- ❌ `Qt.include()` (deprecated Qt 5.14)
+- ❌ Versioned imports (Qt 5 style) — blocks qmlsc
+- ❌ `property var` instead of typed properties — blocks qmlsc
+- ❌ Imperative `property = value` (destroys declarative binding)
+- ❌ `anchors` + `Layout` on same item — conflict
+- ❌ Bare `width`/`height` inside Layout child — silently breaks layout
+- ❌ Loader with both `source` and `sourceComponent` — undefined behavior
+- ❌ `connect()` in `Component.onCompleted` for delegates — connections outlive delegate
+- ❌ Image without `sourceSize` — full-res decoded to GPU memory
+- ❌ `color: "transparent"` on Rectangle — unnecessary scene graph node
+- ❌ `opacity: 0` without animation — still renders, keeps focus
+- ❌ `Text.RichText` unless needed — expensive HTML/CSS parser
+- ❌ `var` instead of `let`/`const` — function scope bugs
+- ❌ Loose equality (`==`/`!=`) — type coercion
+- ❌ `rootContext()->setContextProperty()` — expensive, global, invisible to tooling
+- ❌ `onFoo:` handler syntax in Connections (deprecated)
+- ❌ Emitting C++ signals from QML
+
+### TypeScript Anti-Patterns
+- ❌ `any` in application code — use `unknown` + narrow
+- ❌ Object mutation (`user.name = name`) — use spread `{...user, name}`
+- ❌ Exported functions without explicit parameter/return types
+- ❌ `React.FC` (unless specific reason)
+- ❌ `@ts-ignore` / `@ts-expect-error` / `as any`
+- ❌ Empty catch blocks `catch(e) {}`
+- ❌ `console.log` in production — use proper logger
+
+## UNIQUE STYLES
+
+- **`.agents/` as first-class artifacts**: AI rules, skills, and memory are versioned project files, not external configs. Rules define standards; skills provide deep reference material. Rules reference skills via `See skill: <name>`.
+- **Dual-stack infrastructure**: Build scripts target C++/ROS2 (colcon/pixi/Ninja); `turbo.json` targets JS monorepo. Both coexist in root.
+- **pixi for everything**: Single conda-based package manager manages C++ compiler, ROS2 deps, AND Node.js runtime. Installed from Gitee mirror (`gitee.com/chengxuewen-github/pixi`).
+- **pixi-pack deployment**: Entire pixi environment packed into standalone shell script for offline deployment.
+- **Infrastructure-first**: All scaffolding (scripts, AI rules, docs) committed before any source code. `src/` directory expected but not present.
+- **Custom compile_commands.json**: `gen-compile-db.sh` merges colcon build fragments instead of using CMake's native generation.
+- **3rdparty preservation**: `build.sh` backs up/restores `3rdparty`, `openctk_vendor`, `qext_vendor` directories during clean builds.
+- **`version.txt`**: Plain-text version file in root (not in CMakeLists.txt or package.xml).
+- **`changes/` directory**: Changelog as separate files per version (not `CHANGELOG.md`).
+
+## COMMANDS
+
+### Environment Setup (one-time)
+```bash
+bash bootstrap.sh                        # Install pixi 0.67.2 + all deps + pnpm install
+```
+
+### C++/ROS2 Build
+```bash
+bash scripts/build.sh                    # Full build (colcon + Ninja, RelWithDebInfo)
+bash scripts/build.sh --debug            # Debug build
+bash scripts/build.sh --packages select <pkg>  # Selective package build
+bash scripts/build.sh --clean-cache true       # Clean CMake cache + rebuild
+bash scripts/build.sh --preserve-3rdparty true # Preserve 3rdparty dirs during clean
+```
+
+### Runtime Environment
+```bash
+source scripts/env-source.sh             # Load ROS2 + pixi env into current shell
+source scripts/env-fastdds.sh            # Enable Fast-DDS + SHM shared memory
+bash scripts/env-shell.sh                # Start shell with env loaded
+```
+
+### Deploy / Package
+```bash
+bash scripts/pack.sh --install-dir <dir> # Pack env for deployment
+bash scripts/install.sh                  # Install from packed archive
+bash scripts/archive.sh                  # Archive (excludes env/log/data/node_modules)
+```
+
+### Planned TypeScript Platform (from MODACS-AI-Dev.md)
+```bash
+docker compose up -d db                  # Start PostgreSQL
+corepack enable && pnpm install
+pnpm dev                                 # Backend tsx watch
+pnpm --filter @modacs/ui dev             # Frontend Vite
+MODACS_DEBUG=1 pnpm dev                  # Backend + Foxglove Bridge
+pnpm db:migrate                          # Drizzle Kit migrations
+pnpm db:studio                           # Drizzle Studio
+pnpm build                               # esbuild → dist/
+```
+
+### Testing (C++ — GoogleTest + CTest)
+```bash
+cmake --build build && ctest --test-dir build --output-on-failure
+# Coverage:
+cmake -DCMAKE_CXX_FLAGS="--coverage" -DCMAKE_EXE_LINKER_FLAGS="--coverage" ..
+cmake --build . && ctest && lcov --capture --directory . --output-file coverage.info
+# Sanitizers (ASan + UBSan):
+cmake -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" ..
+```
+
+### Testing (TypeScript — planned)
+```bash
+pnpm test:unit                           # vitest (pure logic)
+pnpm test:integration                    # vitest (API + RPC + DB)
+pnpm test:e2e                            # Playwright end-to-end
+```
+
+## NOTES
+
+- **No git commits**: Repo is initialized but has zero commits. All files are untracked.
+- **No `src/` directory**: Build scripts expect `ROOT_DIR/src/` with ROS2 packages but it doesn't exist yet.
+- **No `pixi.toml`**: Referenced by scripts but not present — likely needs creation.
+- **No `make.sh`**: `AI_CONFIG.md` references `make.sh` as unified build entry but only `scripts/build.sh` exists.
+- **No CI/CD**: Zero `.github/workflows/`, no GitLab CI, no Jenkinsfile.
+- **No Docker**: No Dockerfile or docker-compose.yml (MODACS-AI-Dev.md plans `docker compose up db`).
+- **No `.clang-tidy` / `.clang-format`**: Despite C++ rules mandating them.
+- **`BUILD_TESTING=OFF`**: Tests explicitly disabled in `build.sh` (line 257).
+- **Hardcoded parallelism**: `--parallel-workers 6` in build.sh (not dynamic from nproc).
+- **Slice 1 = Spike**: Per MODACS-AI-Dev.md, no tests during Slice 1 (interfaces unstable). Demo Checklist must still be automated.
+- **Gitee mirror**: pixi installed from `https://gitee.com/chengxuewen-github/pixi` (China-hosted mirror, not upstream GitHub).
+- **Two project identities**: MSRCS (C++/Qt/ROS2, build infra exists) vs MODACS (TS/React/Hono, spec only). `.agents/` covers both.
