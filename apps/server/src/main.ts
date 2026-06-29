@@ -1,7 +1,7 @@
 /**
  * MODACS Server — HTTP entry point.
  *
- * Hono server listening on port 3000.
+ * Hono server listening on port 3001.
  * Routes:
  *   POST /rpc/:method — dispatch JSON-RPC calls to base plugin via hub
  */
@@ -52,4 +52,4 @@ process.on('SIGTERM', async () => {
   process.exit(0);
 });
 
-serve({ fetch: app.fetch, port: 3000 });
+serve({ fetch: app.fetch, port: 3001 });
