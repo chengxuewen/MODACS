@@ -1,0 +1,6 @@
+{
+  "name": "@modacs/server",
+  "version": "0.1.1.1",
+  "type": "module",
+  "private": true
+}

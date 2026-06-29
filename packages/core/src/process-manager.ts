@@ -1,7 +1,7 @@
 /** MODACS child process lifecycle manager — fork + exponential backoff restart. */
 
 import { fork, type ChildProcess } from 'node:child_process';
-import { createLogger, type Logger } from './logger';
+import { createLogger, type Logger } from './logger.ts';
 
 const log: Logger = createLogger('process-manager');
 

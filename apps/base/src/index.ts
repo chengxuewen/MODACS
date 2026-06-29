@@ -5,10 +5,10 @@
  * This is the simplest possible plugin for validating the transport layer.
  */
 
-import { createServer } from '../../packages/core/src/rpc/transport.ts';
-import { formatSocketPath } from '../../packages/core/src/rpc/protocol.ts';
-import { createLogger } from '../../packages/core/src/logger.ts';
-import type { JsonRpcRequest } from '../../packages/core/src/rpc/protocol.ts';
+import { createServer } from '../../../packages/core/src/rpc/transport.ts';
+import { formatSocketPath } from '../../../packages/core/src/rpc/protocol.ts';
+import { createLogger } from '../../../packages/core/src/logger.ts';
+import type { JsonRpcRequest } from '../../../packages/core/src/rpc/protocol.ts';
 
 const logger = createLogger('base-plugin');
 const SOCKET_PATH = formatSocketPath('base');

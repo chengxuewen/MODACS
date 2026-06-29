@@ -10,8 +10,8 @@ import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
 import { mkdirSync, unlinkSync, existsSync } from 'node:fs';
 import { createApp } from './app.ts';
-import type { JsonRpcResponse } from '../../packages/core/src/rpc/protocol.ts';
-import type { JsonRpcError } from '../../packages/core/src/rpc/protocol.ts';
+import type { JsonRpcResponse } from '../../../packages/core/src/rpc/protocol.ts';
+import type { JsonRpcError } from '../../../packages/core/src/rpc/protocol.ts';
 
 // Socket directory — ensure it exists and clean stale sockets
 const SOCKET_DIR = '/tmp/modacs';

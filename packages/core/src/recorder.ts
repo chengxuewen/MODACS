@@ -1,7 +1,8 @@
 /** MCAP passthrough recorder — records RPC calls to MCAP format for Foxglove replay. */
 
 import { McapWriter, type IWritable } from '@mcap/core';
-import { mkdirSync, promises as fs, type FileHandle } from 'node:fs';
+import { mkdirSync, promises as fs } from 'node:fs';
+import type { FileHandle } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createLogger, type Logger } from './logger.ts';
 
@@ -91,7 +92,7 @@ export function createRecorder(dir: string): Recorder {
     await initPromise;
     while (queue.length > 0 && writer && !closed) {
       const event = queue.shift()!;
-      await writer.writeMessage({
+      await writer.addMessage({
         channelId,
         sequence: sequence++,
         logTime: BigInt(event.timestamp),

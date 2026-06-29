@@ -8,16 +8,16 @@
  * - Provides a unified close() for graceful shutdown
  */
 
-import { createLogger } from '../../packages/core/src/logger.ts';
-import { createHub } from '../../packages/core/src/rpc/hub.ts';
-import { spawn } from '../../packages/core/src/process-manager.ts';
-import { createRecorder } from '../../packages/core/src/recorder.ts';
-import { createBridge } from '../../packages/core/src/foxglove-bridge.ts';
-import { formatSocketPath } from '../../packages/core/src/rpc/protocol.ts';
-import type { ManagedProcess } from '../../packages/core/src/process-manager.ts';
-import type { Hub } from '../../packages/core/src/rpc/hub.ts';
-import type { Recorder } from '../../packages/core/src/recorder.ts';
-import type { FoxgloveBridge } from '../../packages/core/src/foxglove-bridge.ts';
+import { createLogger } from '../../../packages/core/src/logger.ts';
+import { createHub } from '../../../packages/core/src/rpc/hub.ts';
+import { spawn } from '../../../packages/core/src/process-manager.ts';
+import { createRecorder } from '../../../packages/core/src/recorder.ts';
+import { createBridge } from '../../../packages/core/src/foxglove-bridge.ts';
+import { formatSocketPath } from '../../../packages/core/src/rpc/protocol.ts';
+import type { ManagedProcess } from '../../../packages/core/src/process-manager.ts';
+import type { Hub } from '../../../packages/core/src/rpc/hub.ts';
+import type { Recorder } from '../../../packages/core/src/recorder.ts';
+import type { FoxgloveBridge } from '../../../packages/core/src/foxglove-bridge.ts';
 
 export interface ServerComponents {
   hub: Hub;
