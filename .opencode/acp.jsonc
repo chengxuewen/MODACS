@@ -1,0 +1,38 @@
+{
+  // ACP (Active Context Pruning) configuration for MSRCS
+  // Migrated from keakon-DCP (2026-06-16) to ranxianglei/opencode-acp@^1.1
+  // Reference: .omo/plans/dcp-to-acp-migration.md, ADR-020, ADR-023
+  "enabled": true,
+  "debug": false,
+  "pruneNotification": "minimal",
+  "pruneNotificationType": "toast",
+  "sessions": {
+    // ACP persists state across restarts (unlike DCP)
+    "directory": "{project}/.omo/acp-sessions/"
+  },
+  "commands": {
+    "enabled": true
+  },
+  "turnProtection": {
+    "enabled": true,
+    "turns": 8,
+    "maxTurns": 12
+  },
+  // Percentage limits: auto-adapt to model context window.
+  // 70% × 128K = ~90K  (fast agents: explore, librarian, quick)
+  // 70% × 1M   = ~700K (premium agents: sisyphus, prometheus)
+  "minContextLimit": "70%",
+  "maxContextLimit": "85%",
+  "strategies": {
+    "deduplication": {
+      "enabled": true
+    },
+    "supersedeWrites": {
+      "enabled": false
+    },
+    "purgeErrors": {
+      "enabled": true,
+      "turns": 6
+    }
+  }
+}
