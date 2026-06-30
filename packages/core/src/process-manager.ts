@@ -2,6 +2,11 @@
 
 import { fork, type ChildProcess } from 'node:child_process';
 import { createLogger, type Logger } from './logger.ts';
+const SIGKILL_GRACE_MS = 5_000;
+const STABLE_WINDOW_MS = 60_000;
+const MAX_RESTARTS = 3;
+const INITIAL_RESTART_DELAY_MS = 1_000;
+const MAX_RESTART_DELAY_MS = 30_000;
 
 const log: Logger = createLogger('process-manager');
 
@@ -38,7 +43,7 @@ export function killAllChildren(): void {
         child.kill('SIGKILL');
       }
     }
-  }, 5000);
+  }, SIGKILL_GRACE_MS);
 }
 
 export function spawn(scriptPath: string, env?: Record<string, string>): ManagedProcess {
@@ -54,7 +59,7 @@ export function spawn(scriptPath: string, env?: Record<string, string>): Managed
     children.set(currentPid, newChild);
     newChild.on('exit', handleExit);
     if (stableTimer) clearTimeout(stableTimer);
-    stableTimer = setTimeout(() => { record.restartCount = 0; }, 60000);
+    stableTimer = setTimeout(() => { record.restartCount = 0; }, STABLE_WINDOW_MS);
   }
 
   function handleExit(code: number | null, signal: string | null): void {
@@ -62,7 +67,7 @@ export function spawn(scriptPath: string, env?: Record<string, string>): Managed
     records.delete(currentPid);
     children.delete(currentPid);
     if (record.killed) return;
-    if (record.restartCount >= 3) {
+    if (record.restartCount >= MAX_RESTARTS) {
       log.error(`Process ${scriptPath} exceeded max restarts, disabling`);
       record.killed = true;
       return;
@@ -71,7 +76,7 @@ export function spawn(scriptPath: string, env?: Record<string, string>): Managed
   }
 
   function scheduleRestart(): void {
-    const delay = Math.min(1000 * Math.pow(2, record.restartCount), 30000);
+    const delay = Math.min(INITIAL_RESTART_DELAY_MS * Math.pow(2, record.restartCount), MAX_RESTART_DELAY_MS);
     log.warn(`Process ${scriptPath} exited, restart in ${delay}ms (attempt ${record.restartCount + 1})`);
     record.restartCount++;
     setTimeout(() => {

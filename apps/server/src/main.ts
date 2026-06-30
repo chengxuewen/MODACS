@@ -14,6 +14,8 @@ import type { JsonRpcResponse } from '../../../packages/core/src/rpc/protocol.ts
 import type { JsonRpcError } from '../../../packages/core/src/rpc/protocol.ts';
 import { serveStatic } from '@hono/node-server/serve-static';
 
+const HTTP_PORT = 3001;
+
 // Socket directory — ensure it exists and clean stale sockets
 const SOCKET_DIR = '/tmp/modacs';
 mkdirSync(SOCKET_DIR, { recursive: true });
@@ -62,4 +64,4 @@ process.on('SIGTERM', async () => {
   process.exit(0);
 });
 
-serve({ fetch: app.fetch, port: 3001 });
+serve({ fetch: app.fetch, port: HTTP_PORT });

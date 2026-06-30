@@ -123,7 +123,7 @@ function createHub(): Hub {
     const unsubs = pluginUnsubs.get(name);
     if (unsubs) {
       for (const unsub of unsubs) {
-        try { unsub(); } catch { /* ignore */ }
+        try { unsub(); } catch { logger.debug('plugin unregister cleanup failed', { name }); }
       }
       pluginUnsubs.delete(name);
     }

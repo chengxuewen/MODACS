@@ -58,7 +58,7 @@ function createServer(socketPath: string, onRequest: RequestHandler, logger: Log
   const server: HttpServer = httpCreateServer(async (req, res) => {
     if (req.method !== 'POST') { res.writeHead(405).end(); return; }
     let raw: string;
-    try { raw = await readBody(req); } catch { res.writeHead(400).end(); return; }
+    try { raw = await readBody(req); } catch (err) { logger.debug('read body failed', { err }); res.writeHead(400).end(); return; }
     let parsed: unknown;
     try { parsed = JSON.parse(raw); } catch {
       const e: JsonRpcError = { jsonrpc: '2.0', error: { code: PARSE_ERROR, message: 'Parse error' }, id: null };
@@ -83,14 +83,14 @@ function createServer(socketPath: string, onRequest: RequestHandler, logger: Log
     }
   });
 
-  try { unlinkSync(socketPath); } catch { /* stale socket */ }
+  try { unlinkSync(socketPath); } catch { logger.debug('stale socket cleanup failed', { socketPath }); }
   server.listen(socketPath);
   logger.info('RPC server listening', { socketPath });
 
   return {
     close(): void {
       server.close(() => {
-        try { unlinkSync(socketPath); } catch { /* already removed */ }
+        try { unlinkSync(socketPath); } catch { logger.debug('socket removal failed', { socketPath }); }
         logger.info('RPC server closed', { socketPath });
       });
     },

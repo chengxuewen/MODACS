@@ -21,6 +21,8 @@ import type { Recorder } from '../../../packages/core/src/recorder.ts';
 import type { FoxgloveBridge } from '../../../packages/core/src/foxglove-bridge.ts';
 import { existsSync } from 'node:fs';
 
+const SOCKET_POLL_INTERVAL_MS = 100;
+const SOCKET_POLL_MAX_RETRIES = 50; // 5 seconds total
 
 export interface ServerComponents {
   hub: Hub;
@@ -45,12 +47,12 @@ async function createApp(): Promise<ServerComponents> {
 
   // Wait for base plugin's UDS socket to be ready (max 5 seconds)
   const baseSocket = formatSocketPath('base');
-  for (let i = 0; i < 50; i++) {
+  for (let i = 0; i < SOCKET_POLL_MAX_RETRIES; i++) {
     if (existsSync(baseSocket)) {
       logger.info('Base plugin socket ready', { socket: baseSocket });
       break;
     }
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, SOCKET_POLL_INTERVAL_MS));
   }
   if (!existsSync(baseSocket)) {
     throw new Error(`Base plugin socket ${baseSocket} not created within 5s timeout`);
