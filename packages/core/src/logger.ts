@@ -46,7 +46,7 @@ function createLogger(name: string, topicBus?: TopicBus): Logger {
       console.log(serialized);
     }
     if (topicBus) {
-      topicBus.publish(`/log/${loggerName}`, entry);
+      topicBus.publish(`/log/${loggerName}`, entry, { retainLast: true });
     }
   }
 
