@@ -1,6 +1,6 @@
 # 关键架构决策 (ADR)
 
-**最后更新**: 2026-06-29
+**最后更新**: 2026-06-30
 
 ## ADR-001: 双栈架构 — MSRCS + MODACS
 
@@ -78,3 +78,34 @@
 **决策**: 所有构建脚本、AI 规则（`.agents/`）、设计文档（`docs/`）在源代码前就位。`src/` 目录预期但尚未创建。
 
 **理由**: 确保开发环境和 AI 工具链在编码开始前完全就绪。AI 规则作为一等项目文件版本管理。
+
+
+---
+
+## ADR-006: AI 代码智能工具链配置（LSP + CodeGraph + AST + 代理编排）
+
+**日期**: 2026-06-30
+**状态**: 已决策
+
+**背景**: 为 OpenCode AI 助手提供结构化代码视图，需要从 LSP、代码图谱、AST 搜索、代理编排四个层面配置工具链。经调研对比 CodeGraph、Serena、Gortex、GitNexus、ChunkHound 等方案后，评估当前项目状态（16 文件，无源代码，脚手架阶段）。
+
+**决策**: 采用三层已就位方案，暂不引入额外工具：
+
+1. **LSP 层**：配置 7 个语言服务器（clangd/typescript-language-server/pyright/bash-language-server/rust-analyzer/html-language-server/remark-language-server），提供 `lsp_diagnostics`/`lsp_goto_definition`/`lsp_find_references`/`lsp_rename`/`lsp_symbols` 工具（来自 oh-my-opencode 插件）。`scripts/install-lsp.sh` 提供幂等安装检查。
+2. **代码图谱层**：使用 `@colbymchenry/codegraph` v1.1.4 MCP（已配置并初始化，16 文件 / 380 节点 / 850 边）。单一工具 `codegraph_explore` 返回源码 + 调用链 + 影响范围。零外部依赖，SQLite 存储。
+3. **AST 搜索层**：`ast_grep_search` + `ast_grep_replace`（来自 oh-my-opencode 插件，已就位）。
+4. **代理编排层**：oh-my-opencode 插件提供 explore/oracle/librarian/metis/momus 等专业代理（已就位）。
+
+**替代方案评估**:
+- **Serena**（24K stars, LSP 驱动, MIT）：源代码到位后评估切换，与项目已有 clangd 配置契合
+- **Gortex**（687 stars, 混合 BM25+向量+图, Apache 2.0）：代码量超过 ~500 文件时评估，最全能单方案
+- **codegraph-ai**（GitHub, 45 工具, Apache 2.0）：比 @colbymchenry/codegraph 功能更全，但当前阶段无需切换
+- **GitNexus**（42K stars, PolyForm Noncommercial）：许可证限制，排除
+- **Sourcegraph**（企业 SaaS）：成本过高，排除
+
+**后续行动**:
+- ~~TypeScript 源代码到位时：在 `opencode.json` 的 `lsp` 中添加 `typescript-language-server`~~（✅ 已于 2026-06-30 完成）
+- C++ 源代码到位时：确保 `compile_commands.json` 已生成（`scripts/gen-compile-db.sh`），clangd 自动生效
+- 代码量超过 ~500 文件时：评估 codegraph 是否仍够用，考虑切换到 Serena 或 Gortex
+
+**理由**: 当前项目处于脚手架阶段，四层能力已全部就位且零额外成本。避免过早引入复杂工具增加配置维护负担。等源代码规模增长后再按需升级。

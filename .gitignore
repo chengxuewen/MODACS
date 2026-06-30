@@ -90,7 +90,6 @@ log
 dist
 build
 install
-install-*
 cmake-build*
 ms_rcs_*x86_64
 ms_rcs_*.tar.gz

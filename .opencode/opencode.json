@@ -52,13 +52,37 @@
     "codegraph": {
       "type": "local",
       "enabled": true,
-      "command": ["bash", "-c", "export NVM_DIR=\"$HOME/.nvm\" && [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\" && exec npx -y @colbymchenry/codegraph serve --mcp"]
+      "command": ["bash", "scripts/codegraph-mcp.sh"]
     }
   },
   "lsp": {
     "clangd": {
       "command": ["clangd", "--background-index"],
       "extensions": ["cpp", "h", "hpp", "cc", "cxx"]
+    },
+    "typescript-language-server": {
+      "command": ["typescript-language-server", "--stdio"],
+      "extensions": ["ts", "tsx", "js", "jsx"]
+    },
+    "pyright": {
+      "command": ["pyright-langserver", "--stdio"],
+      "extensions": ["py"]
+    },
+    "bash-language-server": {
+      "command": ["bash-language-server", "start"],
+      "extensions": ["sh", "bash"]
+    },
+    "rust-analyzer": {
+      "command": ["rust-analyzer"],
+      "extensions": ["rs"]
+    },
+    "html-language-server": {
+      "command": ["vscode-html-language-server", "--stdio"],
+      "extensions": ["html", "htm"]
+    },
+    "remark-language-server": {
+      "command": ["remark-language-server", "--stdio"],
+      "extensions": ["md", "markdown"]
     }
   }
 }

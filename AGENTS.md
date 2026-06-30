@@ -18,7 +18,7 @@ MODACS/
 │   │   ├── cpp/       # C++17/Qt/ROS2 extensions
 │   │   ├── typescript/# TS/JS extensions
 │   │   └── zh/        # Chinese translations
-│   └── skills/        # Deep reference: cpp-coding-standards, cpp-testing, qt-*, openspec-*
+│   └── skills/        # 14 skills: 2 project (cpp-*), 7 Qt6 (cpp-review, cpp-docs, qml, qml-review, qml-docs, qml-profiler, ui-design), 5 OpenSpec
 ├── .opencode/         # OpenCode AI IDE config (opencode.json, AI_CONFIG.md, MODEL_TIERS.md)
 ├── scripts/           # 11 shell scripts: build, env, pixi, pack, deploy
 ├── docs/              # 11 architecture & design docs (platform, cluster, vision, act, link, naming, MES, etc.)
@@ -42,23 +42,30 @@ MODACS/
 | Enter runtime shell | `source scripts/env-source.sh` | Loads ROS2 + pixi env |
 | Fast-DDS + SHM | `source scripts/env-fastdds.sh` | RMW=rmw_fastrtps_cpp |
 | Generate compile_commands.json | `scripts/gen-compile-db.sh` | For clangd LSP |
-| TS platform spec | `docs/MODACS-AI-Dev.md` | AI coding rules, tech stack, code templates (788 lines) |
-| Project overview | `docs/MODACS-Overview.md` | Top-level: vision, architecture, roadmap, decisions (462 lines) |
-| Platform architecture | `docs/MODACS-Platform.md` | Odoo-style modular platform: multi-process, plugin lifecycle, UI isolation (1751 lines) |
-| Development guide | `docs/MODACS-Platform-Dev.md` | Vertical slice implementation with TypeScript code templates (3860 lines) |
-| Cluster architecture | `docs/MODACS-Cluster.md` | Multi-node cluster, app version management (710 lines) |
-| Open-source reference | `docs/MODACS-Platform-Ref.md` | CasaOS/Runtipi/1Panel/NocoBase/Odoo/n8n comparison (1294 lines) |
-| Vision product | `docs/MODACS-Vision.md` | Video monitoring + AI analysis platform (Rust/dora-rs, 547 lines) |
-| Act product | `docs/MODACS-Act.md` | Execution layer: soft PLC, CNC, DCS (Rust/dora-rs, 97 lines) |
-| Link middleware | `docs/MODACS-Link.md` | Middleware abstraction for Podman-isolated modules (Rust/dora-rs, 570 lines) |
-| Naming whitepaper | `docs/MODACS-Naming.md` | Brand architecture, trademark analysis, product family naming (250 lines) |
-| MES development plan | `docs/MES-Development-Plan.md` | First MES app: tech selection, architecture, 28-week roadmap (510 lines) |
+| TS platform spec | `docs/MODACS-AI-Dev.md` | AI coding rules, tech stack, code templates (776 lines) |
+| Project overview | `docs/MODACS-Overview.md` | Top-level: vision, architecture, roadmap, decisions (469 lines) |
+| Platform architecture | `docs/MODACS-Platform.md` | Odoo-style modular platform: multi-process, plugin lifecycle, UI isolation (1740 lines) |
+| Development guide | `docs/MODACS-Platform-Dev.md` | Vertical slice implementation with TypeScript code templates (3848 lines) |
+| Cluster architecture | `docs/MODACS-Cluster.md` | Multi-node cluster, app version management (698 lines) |
+| Open-source reference | `docs/MODACS-Platform-Ref.md` | CasaOS/Runtipi/1Panel/NocoBase/Odoo/n8n comparison (1282 lines) |
+| Vision product | `docs/MODACS-Vision.md` | Video monitoring + AI analysis platform (Rust/dora-rs, 536 lines) |
+| Act product | `docs/MODACS-Act.md` | Execution layer: soft PLC, CNC, DCS (Rust/dora-rs, 88 lines) |
+| Link middleware | `docs/MODACS-Link.md` | Middleware abstraction for Podman-isolated modules (Rust/dora-rs, 558 lines) |
+| Naming whitepaper | `docs/MODACS-Naming.md` | Brand architecture, trademark analysis, product family naming (366 lines) |
+| MES development plan | `docs/MES-Development-Plan.md` | First MES app: tech selection, architecture, 28-week roadmap (499 lines) |
 | AI dev workflow | `.opencode/AI_CONFIG.md` | 7-stage pipeline, agent roles |
 | Model tiers | `.opencode/MODEL_TIERS.md` | premium-max/premium/fast/vision/lite |
 | Skills registry | `SKILL.md` | Superpowers + project skills mapping |
 | Coding rules | `.agents/rules/` | common/ + cpp/ + typescript/ |
 | C++ testing ref | `.agents/skills/cpp-testing.md` | GoogleTest patterns, TDD, sanitizers |
-| Qt review checklists | `.agents/skills/qt-cpp-review/references/` | 271-line C++ + 490-line QML |
+| Qt C++ review | `.agents/skills/qt-cpp-review/` | 60+ lint rules + 6 parallel analysis agents (Qt6) |
+| Qt QML review | `.agents/skills/qt-qml-review/` | 47+ lint rules + 6 parallel analysis agents (Qt6) |
+| Qt QML best practices | `.agents/skills/qt-qml/` | QML coding patterns and conventions |
+| Qt QML profiler | `.agents/skills/qt-qml-profiler/` | QML performance profiling and hotspot analysis |
+| Qt UI design | `.agents/skills/qt-ui-design/` | UI/UX design and audit for Qt/QML |
+| Qt C++ docs gen | `.agents/skills/qt-cpp-docs/` | Markdown reference docs from C++ source |
+| Qt QML docs gen | `.agents/skills/qt-qml-docs/` | Markdown reference docs from QML source |
+| OpenSpec workflow | `.agents/skills/openspec-*/` | 5 skills: propose, apply-change, archive-change, explore, sync-specs |
 
 ## CONVENTIONS
 
@@ -179,6 +186,28 @@ MODACS/
 - ❌ `@ts-ignore` / `@ts-expect-error` / `as any`
 - ❌ Empty catch blocks `catch(e) {}`
 - ❌ `console.log` in production — use proper logger
+
+## AI 工具使用优先级
+
+> AI 助手在处理代码相关任务时，应按以下优先级选择工具。
+
+| 任务场景 | 首选工具 | 回退方案 |
+|----------|---------|----------|
+| 代码理解/导航/架构分析 | `codegraph_explore` | grep + read |
+| 符号定义查找 | `lsp_goto_definition` | `codegraph_explore` |
+| 符号引用查找 | `lsp_find_references` | `codegraph_explore` |
+| 符号重命名 | `lsp_rename` | 手动 sed/edit |
+| 结构化代码搜索 | `ast_grep_search` | grep |
+| 结构化代码替换 | `ast_grep_replace` | sed |
+| 代码诊断/类型检查 | `lsp_diagnostics` | build 命令 |
+| 文档大纲/符号列表 | `lsp_symbols` | grep function/class |
+
+**规则**：
+- 调用 `codegraph_explore` 前无需先 grep 或 read — 一次调用即可返回源码 + 调用链 + 影响范围
+- 仅当 codegraph 报告未索引（无 `.codegraph/` 目录）或返回结果不足时，才回退到 grep/read
+- 编辑文件后，若 codegraph 返回过期警告（⚠️ banner），对警告中列出的文件使用 read 确认最新内容
+- `lsp_*` 工具仅对已配置 LSP 的语言生效（当前：C++/clangd；TypeScript 待添加）
+- 对 codegraph 不索引的内容（配置文件、文档、非代码文件），直接使用 read/grep
 
 ## UNIQUE STYLES
 

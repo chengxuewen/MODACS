@@ -1,6 +1,6 @@
 # 编码约定
 
-**最后更新**: 2026-06-29
+**最后更新**: 2026-06-30
 
 ## 命名规范
 
@@ -78,3 +78,24 @@
 - 分支命名：`feat/`, `fix/`, `chore/` 前缀
 - 提交信息：Conventional Commits 格式（`feat:` `fix:` `chore:` `docs:`）
 - 仓库当前零提交，所有文件未跟踪
+
+## AI 工具使用优先级
+
+> 详细说明见 [AGENTS.md](../../AGENTS.md) 的「AI 工具使用优先级」章节。
+
+| 任务场景 | 首选工具 | 回退方案 |
+|----------|---------|----------|
+| 代码理解/导航/架构分析 | `codegraph_explore` | grep + read |
+| 符号定义查找 | `lsp_goto_definition` | `codegraph_explore` |
+| 符号引用查找 | `lsp_find_references` | `codegraph_explore` |
+| 符号重命名 | `lsp_rename` | 手动 sed/edit |
+| 结构化代码搜索 | `ast_grep_search` | grep |
+| 代码诊断/类型检查 | `lsp_diagnostics` | build 命令 |
+| 文档大纲/符号列表 | `lsp_symbols` | grep function/class |
+
+**规则**：
+- 调用 `codegraph_explore` 前无需先 grep 或 read — 一次调用即可返回源码 + 调用链 + 影响范围
+- 仅当 codegraph 报告未索引（无 `.codegraph/` 目录）或返回结果不足时，才回退到 grep/read
+- 编辑文件后，若 codegraph 返回过期警告（⚠️ banner），对警告中列出的文件使用 read 确认最新内容
+- `lsp_*` 工具仅对已配置 LSP 的语言生效（当前：C++/clangd, TypeScript, Python, Bash, Rust, HTML, Markdown）
+- 对 codegraph 不索引的内容（配置文件、文档、非代码文件），直接使用 read/grep

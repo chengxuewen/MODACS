@@ -1,0 +1,263 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "new-api/deepseek-v4-pro",
+  "provider": {
+    "new-api": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "New API Gateway",
+      "options": {
+        "baseURL": "http://192.168.100.47:3000/v1",
+        "apiKey": "sk-UtmjkxlGMqURHwDWX1cOgjnQxt1nb1yDQDlDrDEsenlCAOwX",
+        "maxRetries": 1
+      },
+      "models": {
+        "premium-max": {
+          "name": "premium-max",
+          "limit": {
+            "context": 1024000,
+            "output": 32768
+          },
+          "modalities": {
+            "input": [
+              "text"
+            ],
+            "output": [
+              "text"
+            ]
+          }
+        },
+        "premium-max-1": {
+          "name": "premium-max-1",
+          "limit": {
+            "context": 256000,
+            "output": 8192
+          },
+          "modalities": {
+            "input": [
+              "text"
+            ],
+            "output": [
+              "text"
+            ]
+          }
+        },
+        "premium-max-2": {
+          "name": "premium-max-2",
+          "limit": {
+            "context": 1024000,
+            "output": 8192
+          },
+          "modalities": {
+            "input": [
+              "text",
+              "image"
+            ],
+            "output": [
+              "text"
+            ]
+          }
+        },
+        "premium": {
+          "name": "premium",
+          "limit": {
+            "context": 1024000,
+            "output": 32768
+          },
+          "modalities": {
+            "input": [
+              "text"
+            ],
+            "output": [
+              "text"
+            ]
+          }
+        },
+        "premium-1": {
+          "name": "premium-1",
+          "limit": {
+            "context": 1024000,
+            "output": 8192
+          },
+          "modalities": {
+            "input": [
+              "text"
+            ],
+            "output": [
+              "text"
+            ]
+          }
+        },
+        "premium-2": {
+          "name": "premium-2",
+          "limit": {
+            "context": 205000,
+            "output": 8192
+          },
+          "modalities": {
+            "input": [
+              "text"
+            ],
+            "output": [
+              "text"
+            ]
+          }
+        },
+        "fast": {
+          "name": "fast",
+          "limit": {
+            "context": 1024000,
+            "output": 16384
+          },
+          "modalities": {
+            "input": [
+              "text"
+            ],
+            "output": [
+              "text"
+            ]
+          }
+        },
+        "fast-1": {
+          "name": "fast-1",
+          "limit": {
+            "context": 131072,
+            "output": 4096
+          },
+          "modalities": {
+            "input": [
+              "text",
+              "image"
+            ],
+            "output": [
+              "text"
+            ]
+          }
+        },
+        "fast-2": {
+          "name": "fast-2",
+          "limit": {
+            "context": 256000,
+            "output": 4096
+          },
+          "modalities": {
+            "input": [
+              "text",
+              "image"
+            ],
+            "output": [
+              "text"
+            ]
+          }
+        },
+        "vision": {
+          "name": "vision",
+          "limit": {
+            "context": 256000,
+            "output": 16384
+          },
+          "modalities": {
+            "input": [
+              "text",
+              "image"
+            ],
+            "output": [
+              "text"
+            ]
+          }
+        },
+        "vision-1": {
+          "name": "vision-1",
+          "limit": {
+            "context": 131072,
+            "output": 4096
+          },
+          "modalities": {
+            "input": [
+              "text",
+              "image"
+            ],
+            "output": [
+              "text"
+            ]
+          }
+        },
+        "vision-2": {
+          "name": "vision-2",
+          "limit": {
+            "context": 1048576,
+            "output": 65536
+          },
+          "modalities": {
+            "input": [
+              "text",
+              "image"
+            ],
+            "output": [
+              "text"
+            ]
+          }
+        },
+        "lite": {
+          "name": "lite",
+          "limit": {
+            "context": 40960,
+            "output": 4096
+          },
+          "modalities": {
+            "input": [
+              "text"
+            ],
+            "output": [
+              "text"
+            ]
+          }
+        },
+        "lite-1": {
+          "name": "lite-1",
+          "limit": {
+            "context": 131072,
+            "output": 4096
+          },
+          "modalities": {
+            "input": [
+              "text"
+            ],
+            "output": [
+              "text"
+            ]
+          }
+        },
+        "deepseek-v4-pro": {
+          "name": "deepseek-v4-pro",
+          "limit": {
+            "context": 1024000,
+            "output": 32768
+          },
+          "modalities": {
+            "input": [
+              "text"
+            ],
+            "output": [
+              "text"
+            ]
+          }
+        },
+        "deepseek-v4-flash": {
+          "name": "deepseek-v4-flash",
+          "limit": {
+            "context": 1024000,
+            "output": 16384
+          },
+          "modalities": {
+            "input": [
+              "text"
+            ],
+            "output": [
+              "text"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

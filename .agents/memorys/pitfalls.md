@@ -1,6 +1,6 @@
 # 踩坑记录
 
-**最后更新**: 2026-06-29
+**最后更新**: 2026-06-30
 
 ## 文档同步
 
@@ -46,7 +46,7 @@
 
 **问题**: 多个脚本引用 `pixi.toml` 但该文件不存在于仓库中。
 
-**状态**: 未解决 — 需要创建 `pixi.toml` 才能运行 `bootstrap.sh`。
+**状态**: 未解决 — 需要创建 `pixi.toml` 才能运行 `bootstrap.sh`。（2026-06-30 确认仍不存在）
 
 ---
 
@@ -102,4 +102,20 @@
 
 **问题**: C++ 编码规则要求使用 clang-format 和 clang-tidy，但项目中无对应配置文件。
 
-**状态**: 未解决 — 需要创建配置文件。
+**状态**: ✅ 已解决（2026-06-30）— 已创建 `.clangd`（LSP 配置 + C++17 标准 + 命名规则）、`.clang-format`（LLVM 风格 + Qt/ROS2 include 排序）、`.clang-tidy`（bugprone/performance/readability/modernize 检查集）。
+
+---
+
+### TypeScript LSP 未配置
+
+**问题**: TypeScript 源代码已存在（10 个 .ts 文件），但 `opencode.json` 中未配置 TypeScript LSP，`typescript-language-server` 未安装。
+
+**解决**: ✅ 已解决（2026-06-30）— 全局安装 `typescript-language-server` v5.3.0 + `typescript`，在 `opencode.json` 的 `lsp` 中添加 `typescript-language-server` 条目（extensions: ts/tsx/js/jsx）。
+
+---
+
+### CodeGraph MCP 连接失败（nvm 短路）
+
+**问题**: `opencode.json` 中 codegraph MCP 的 command 使用 `&&` 链连接 nvm source 和 npx 执行。当 nvm 未安装时（`[ -s "$NVM_DIR/nvm.sh" ]` 返回 false），`&&` 链短路，`exec npx` 永远不执行，MCP 进程启动后立即退出。
+
+**解决**: ✅ 已解决（2026-06-30）— 创建 `scripts/codegraph-mcp.sh` 包装脚本，自动探测 nvm/brew/直装三种 Node.js 环境。`opencode.json` command 改为 `["bash", "scripts/codegraph-mcp.sh"]`。

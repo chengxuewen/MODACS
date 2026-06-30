@@ -35,12 +35,24 @@ Rules 中通过 `See skill: <name>` 引用 Skills，形成 "规则约束 → 技
 
 ## 项目专属技能
 
-位于 `.agents/skills/`，为 C++ 项目提供语言特定的深度参考：
+位于 `.agents/skills/`，覆盖 C++ 和 Qt 开发的深度参考：
 
 | 技能 | 文件 | 内容 |
 |------|------|------|
 | `cpp-coding-standards` | `cpp-coding-standards.md` | 现代 C++ 编码规范、RAII、命名、格式化、安全性、性能优化 |
 | `cpp-testing` | `cpp-testing.md` | GoogleTest/GMock 测试模式、TDD 工作流、覆盖率与 Sanitizer 集成 |
+| `qt-cpp-review` | `qt-cpp-review/SKILL.md` | Qt6 C++ 代码审查：60+ lint 规则 + 6 并行分析 agent（模型契约、所有权、线程、API、错误处理、性能） |
+| `qt-qml-review` | `qt-qml-review/SKILL.md` | Qt6 QML 代码审查：47+ lint 规则 + 6 并行分析 agent（绑定、布局、Loader、委托、状态、性能） |
+| `qt-qml` | `qt-qml/SKILL.md` | QML 最佳实践：编写、审查、修复、重构、优化 QML 代码 |
+| `qt-qml-docs` | `qt-qml-docs/SKILL.md` | 从 QML 源码生成 Markdown 参考文档 |
+| `qt-qml-profiler` | `qt-qml-profiler/SKILL.md` | QML/Qt Quick 性能分析：帧时间、内存、pixmap 缓存 |
+| `qt-ui-design` | `qt-ui-design/SKILL.md` | Qt/QML UI 设计与审计：屏幕、布局、导航、UX |
+| `qt-cpp-docs` | `qt-cpp-docs/SKILL.md` | 从 C++ 源码生成 Markdown 参考文档 |
+| `openspec-propose` | `openspec-propose/SKILL.md` | 一步生成完整变更提案：设计、规格、任务 |
+| `openspec-apply-change` | `openspec-apply-change/SKILL.md` | 实施变更中的任务：开始、继续、逐步执行 |
+| `openspec-archive-change` | `openspec-archive-change/SKILL.md` | 归档已完成变更：记录决策、更新记忆、清理产物 |
+| `openspec-explore` | `openspec-explore/SKILL.md` | 探索模式：思考伙伴，用于探索想法、调查问题、澄清需求 |
+| `openspec-sync-specs` | `openspec-sync-specs/SKILL.md` | 将 delta specs 同步到主规格（不归档变更） |
 
 ## 代理（Agents）
 
