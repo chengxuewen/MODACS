@@ -75,8 +75,8 @@ async function createApp(): Promise<ServerComponents> {
   await hub.call('base', 'echo', ['warmup']);
 
   // Publish known RPC topics to TopicBus for Foxglove bridge discovery
-  topicBus.publish('rpc.echo.request', { plugin: 'base', method: 'echo' });
-  topicBus.publish('rpc.echo.response', { plugin: 'base', method: 'echo' });
+  topicBus.publish('/rpc/echo/request', { plugin: 'base', method: 'echo' });
+  topicBus.publish('/rpc/echo/response', { plugin: 'base', method: 'echo' });
   logger.info('Server components assembled', {
     plugin: 'base',
     socket: formatSocketPath('base'),
