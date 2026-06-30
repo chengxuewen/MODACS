@@ -149,6 +149,15 @@ function createBridge(topicBus?: TopicBus, port: number = DEFAULT_PORT): Foxglov
       const name = `${req.socket.remoteAddress}:${req.socket.remotePort}`;
       server.handleConnection(conn as unknown as IWebSocket, name);
       logger.debug('Foxglove client connected');
+
+      // Send welcome data for all advertised channels so Foxglove marks them available
+      const encoder = new TextEncoder();
+      for (const [topic, chanId] of topicToChannel) {
+        const welcomeData = { level: 'info', name: 'foxglove-bridge', msg: 'channel available', channel: topic, time: Date.now() };
+        try {
+          server.sendMessage(chanId, BigInt(Date.now()) * 1_000_000n, encoder.encode(JSON.stringify(welcomeData)));
+        } catch { /* best-effort — channel might not be ready */ }
+      }
     });
 
     ws.on('error', (err: NodeJS.ErrnoException) => {
