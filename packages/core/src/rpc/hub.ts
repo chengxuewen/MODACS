@@ -32,6 +32,12 @@ interface Hub {
   onCall(callback: CallHook): void;
   onResult(callback: ResultHook): void;
   topicBus: TopicBus;
+  /**
+   * Subscribe a plugin to a topic. When the topic fires, hub sends a
+   * `topic:event` JSON-RPC notification to the plugin via UDS.
+   * Returns an unsubscribe function.
+   */
+  subscribeForPlugin(pluginName: string, topic: string): () => void;
 }
 
 function createHub(): Hub {
@@ -113,6 +119,15 @@ function createHub(): Hub {
   }
 
   function unregisterPlugin(name: string): void {
+    // Clean up topic subscriptions
+    const unsubs = pluginUnsubs.get(name);
+    if (unsubs) {
+      for (const unsub of unsubs) {
+        try { unsub(); } catch { /* ignore */ }
+      }
+      pluginUnsubs.delete(name);
+    }
+
     const client = clients.get(name);
     if (client) {
       client.close();
@@ -130,7 +145,35 @@ function createHub(): Hub {
     resultHooks.push(callback);
   }
 
-  return { registerPlugin, unregisterPlugin, call, broadcast, onCall, onResult, topicBus };
+  /** Track unsubscribe functions per plugin for cleanup. */
+  const pluginUnsubs = new Map<string, Array<() => void>>();
+
+  function subscribeForPlugin(pluginName: string, topic: string): () => void {
+    if (!plugins.has(pluginName)) {
+      logger.warn('subscribeForPlugin: plugin not registered', { pluginName, topic });
+      return () => {};
+    }
+
+    const unsub = topicBus.subscribe(
+      topic,
+      (data: unknown) => {
+        const client = getOrCreateClient(pluginName);
+        client.call('topic:event', [topic, data]).catch((err: unknown) => {
+          logger.debug('topic:event notification failed', { pluginName, topic, err });
+        });
+      },
+      pluginName,
+    );
+
+    const list = pluginUnsubs.get(pluginName) ?? [];
+    list.push(unsub);
+    pluginUnsubs.set(pluginName, list);
+
+    logger.info('Plugin subscribed to topic', { pluginName, topic });
+    return unsub;
+  }
+
+  return { registerPlugin, unregisterPlugin, call, broadcast, onCall, onResult, topicBus, subscribeForPlugin };
 }
 
 export { createHub, type Hub, type CallHook, type ResultHook };

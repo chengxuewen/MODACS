@@ -47,6 +47,12 @@ app.post('/rpc/:method', async (c) => {
   return c.json(result);
 });
 
+// GET /api/topics:list — return all active topic metadata
+app.get('/api/topics:list', (c) => {
+  const topics = hub.topicBus.getTopics();
+  return c.json(topics);
+});
+
 // Serve static debug page
 app.use('/*', serveStatic({ root: './apps/server/public' }));
 
