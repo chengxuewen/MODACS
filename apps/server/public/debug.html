@@ -97,6 +97,17 @@ pre {
 </div>
 
 <div class="panel">
+  <h2>🧪 Log Test</h2>
+  <p style="font-size:0.8rem;color:#a0a0c0;">Generates log entries visible in Foxglove Studio under /log/* channels</p>
+  <div class="row" style="gap:6px;flex-wrap:wrap;">
+    <button onclick="logStorm(5)">⚡ 5x Log Burst</button>
+    <button onclick="logStorm(20)">🔥 20x Log Storm</button>
+    <button onclick="logStorm(50)">💥 50x Log Flood</button>
+  </div>
+  <pre id="log-test-output" style="max-height:120px;font-size:0.75rem;margin-top:8px;">Click a button to generate log traffic...</pre>
+</div>
+
+<div class="panel">
   <h2>Process Info</h2>
   <div class="grid">
     <div><label>MODACS_DEBUG</label><span id="info-debug">—</span></div>
@@ -275,6 +286,29 @@ refreshTopics();
 checkStatus();
 checkDebugMode();
 setInterval(checkStatus, 5000);
+
+async function logStorm(count) {
+  const output = document.getElementById('log-test-output');
+  output.textContent = '⏳ Generating ' + count + ' log entries...\n' + output.textContent;
+  let success = 0;
+  let fail = 0;
+  const start = performance.now();
+  for (let i = 1; i <= count; i++) {
+    try {
+      const res = await fetch('/rpc/echo', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({jsonrpc:'2.0',method:'echo',params:['log-test-' + i],id:Date.now()})
+      });
+      if (res.ok) success++;
+      else fail++;
+    } catch(e) { fail++; }
+    if (count <= 20 && i % 5 === 0) await new Promise(r => setTimeout(r, 50));
+    if (count > 20 && i % 10 === 0) await new Promise(r => setTimeout(r, 50));
+  }
+  const ms = (performance.now() - start).toFixed(0);
+  output.textContent = '✅ Done! ' + success + '/' + count + ' ok, ' + fail + ' fail (' + ms + 'ms total)\n💡 Check Foxglove Studio → /log/* channels for real-time log display\n' + output.textContent;
+}
 </script>
 </body>
 </html>
