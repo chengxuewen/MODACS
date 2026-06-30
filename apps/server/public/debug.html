@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MODACS Debug Console</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #1a1a2e; color: #e0e0e0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  max-width: 800px; margin: 0 auto; padding: 20px;
+}
+h1 { font-size: 1.5rem; margin-bottom: 1rem; color: #a0a0c0; }
+h2 { font-size: 1.1rem; margin-bottom: 0.5rem; }
+.panel {
+  background: #16213e; border: 1px solid #0f3460; border-radius: 8px;
+  padding: 16px; margin-bottom: 16px;
+}
+.row { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
+.indicator {
+  display: inline-block; width: 12px; height: 12px; border-radius: 50%;
+  background: #444; flex-shrink: 0;
+}
+.indicator.alive { background: #00ff88; box-shadow: 0 0 8px #00ff8866; }
+.indicator.down { background: #ff3355; box-shadow: 0 0 8px #ff335566; }
+label { display: block; margin-bottom: 4px; font-size: 0.85rem; color: #a0a0c0; }
+input[type="text"], textarea {
+  width: 100%; background: #1a1a2e; color: #e0e0e0;
+  border: 1px solid #0f3460; border-radius: 4px; padding: 8px;
+  font-family: 'Courier New', monospace; font-size: 0.85rem;
+}
+textarea { min-height: 80px; resize: vertical; }
+button {
+  background: #0f3460; color: #e0e0e0; border: none;
+  border-radius: 4px; padding: 6px 16px; cursor: pointer;
+  font-size: 0.85rem;
+}
+button:hover { background: #1a4a80; }
+pre {
+  background: #0d1117; border-radius: 4px; padding: 12px;
+  font-family: 'Courier New', monospace; font-size: 0.8rem;
+  overflow-x: auto; white-space: pre-wrap; word-break: break-all;
+  max-height: 300px; overflow-y: auto; margin-top: 8px;
+}
+.latency { font-size: 0.8rem; color: #888; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+@media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<h1>🔧 MODACS Debug Console</h1>
+
+<div class="panel" id="status-panel">
+  <h2>Server Status</h2>
+  <div class="row">
+    <span class="indicator" id="status-indicator"></span>
+    <span id="status-text">Checking…</span>
+    <span class="latency" id="status-latency"></span>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>Echo Tester</h2>
+  <div class="row">
+    <input type="text" id="echo-input" placeholder="Enter message to echo…" style="flex:1;">
+    <button onclick="sendEcho()">Send</button>
+  </div>
+  <pre id="echo-result">Response will appear here.</pre>
+  <div class="latency" id="echo-latency"></div>
+</div>
+
+<div class="panel">
+  <h2>JSON-RPC Console</h2>
+  <label for="rpc-input">Raw JSON-RPC request body:</label>
+  <textarea id="rpc-input" placeholder='{"jsonrpc":"2.0","method":"echo","params":["hello"],"id":1}'></textarea>
+  <div class="row">
+    <label for="rpc-method" style="margin:0;">Method:</label>
+    <input type="text" id="rpc-method" value="echo" style="flex:1;">
+    <button onclick="sendRpc()">Send</button>
+  </div>
+  <pre id="rpc-result">Response will appear here.</pre>
+  <div class="latency" id="rpc-latency"></div>
+</div>
+
+<div class="panel">
+  <h2>Process Info</h2>
+  <div class="grid">
+    <div><label>MODACS_DEBUG</label><span id="info-debug">—</span></div>
+    <div><label>Port</label><span id="info-port">3001</span></div>
+    <div><label>Latency</label><span id="info-latency">—</span></div>
+  </div>
+</div>
+
+<script>
+const STATUS_URL = window.location.origin + '/rpc/echo';
+let lastOk = false;
+
+async function checkStatus() {
+  const indicator = document.getElementById('status-indicator');
+  const text = document.getElementById('status-text');
+  const latEl = document.getElementById('status-latency');
+  const start = performance.now();
+  try {
+    const res = await fetch(STATUS_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({jsonrpc:'2.0',method:'echo',params:['ping'],id:Date.now()})
+    });
+    const ms = (performance.now() - start).toFixed(2);
+    if (res.ok) {
+      indicator.className = 'indicator alive';
+      text.textContent = 'ALIVE';
+      latEl.textContent = ms + 'ms';
+      lastOk = true;
+    } else { throw new Error('HTTP ' + res.status); }
+  } catch {
+    indicator.className = 'indicator down';
+    text.textContent = 'DOWN';
+    latEl.textContent = '';
+    lastOk = false;
+  }
+}
+
+async function sendEcho() {
+  const input = document.getElementById('echo-input');
+  const result = document.getElementById('echo-result');
+  const latEl = document.getElementById('echo-latency');
+  const start = performance.now();
+  try {
+    const res = await fetch('/rpc/echo', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({jsonrpc:'2.0',method:'echo',params:[input.value],id:Date.now()})
+    });
+    const ms = (performance.now() - start).toFixed(2);
+    const data = await res.json();
+    result.textContent = JSON.stringify(data, null, 2);
+    latEl.textContent = 'Latency: ' + ms + 'ms';
+  } catch (err) {
+    result.textContent = 'Error: ' + err.message;
+    latEl.textContent = '';
+  }
+}
+
+async function sendRpc() {
+  const bodyEl = document.getElementById('rpc-input');
+  const method = document.getElementById('rpc-method').value;
+  const result = document.getElementById('rpc-result');
+  const latEl = document.getElementById('rpc-latency');
+  const start = performance.now();
+  try {
+    const res = await fetch('/rpc/' + method, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: bodyEl.value || '{}'
+    });
+    const ms = (performance.now() - start).toFixed(2);
+    const data = await res.json();
+    result.textContent = JSON.stringify(data, null, 2);
+    latEl.textContent = 'Latency: ' + ms + 'ms';
+  } catch (err) {
+    result.textContent = 'Error: ' + err.message;
+    latEl.textContent = '';
+  }
+}
+
+checkStatus();
+setInterval(checkStatus, 5000);
+</script>
+</body>
+</html>

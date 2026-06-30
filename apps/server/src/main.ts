@@ -12,6 +12,7 @@ import { mkdirSync, unlinkSync, existsSync } from 'node:fs';
 import { createApp } from './app.ts';
 import type { JsonRpcResponse } from '../../../packages/core/src/rpc/protocol.ts';
 import type { JsonRpcError } from '../../../packages/core/src/rpc/protocol.ts';
+import { serveStatic } from '@hono/node-server/serve-static';
 
 // Socket directory — ensure it exists and clean stale sockets
 const SOCKET_DIR = '/tmp/modacs';
@@ -45,6 +46,9 @@ app.post('/rpc/:method', async (c) => {
   const result: JsonRpcResponse | JsonRpcError = await hub.call('base', method, params);
   return c.json(result);
 });
+
+// Serve static debug page
+app.use('/*', serveStatic({ root: './apps/server/public' }));
 
 // Graceful shutdown — close hub, recorder, bridge, kill children
 process.on('SIGTERM', async () => {
