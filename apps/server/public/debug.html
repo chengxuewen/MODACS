@@ -112,6 +112,7 @@ async function checkStatus() {
       indicator.className = 'indicator alive';
       text.textContent = 'ALIVE';
       latEl.textContent = ms + 'ms';
+      document.getElementById('info-latency').textContent = ms + 'ms';
       lastOk = true;
     } else { throw new Error('HTTP ' + res.status); }
   } catch {
@@ -165,7 +166,26 @@ async function sendRpc() {
   }
 }
 
+async function checkDebugMode() {
+  const el = document.getElementById('info-debug');
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 1000);
+    await fetch('http://127.0.0.1:8765', { 
+      mode: 'no-cors',
+      signal: controller.signal 
+    });
+    clearTimeout(timeout);
+    el.textContent = '1 (Foxglove active)';
+    el.style.color = '#00ff88';
+  } catch {
+    el.textContent = '0';
+    el.style.color = '#888';
+  }
+}
+
 checkStatus();
+checkDebugMode();
 setInterval(checkStatus, 5000);
 </script>
 </body>
