@@ -8,7 +8,7 @@
 
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
-import { mkdirSync, unlinkSync, existsSync } from 'node:fs';
+import { mkdirSync, unlinkSync, existsSync, chmodSync } from 'node:fs';
 import { createApp } from './app.ts';
 import type { JsonRpcResponse } from '../../../packages/core/src/rpc/protocol.ts';
 import type { JsonRpcError } from '../../../packages/core/src/rpc/protocol.ts';
@@ -19,6 +19,7 @@ const HTTP_PORT = 3001;
 // Socket directory — ensure it exists and clean stale sockets
 const SOCKET_DIR = '/tmp/modacs';
 mkdirSync(SOCKET_DIR, { recursive: true });
+chmodSync(SOCKET_DIR, 0o700);
 
 const staleSockets = ['base.sock'];
 for (const name of staleSockets) {
@@ -34,7 +35,13 @@ const app = new Hono();
 
 app.post('/rpc/:method', async (c) => {
   const method = c.req.param('method');
-  const body: unknown = await c.req.json();
+
+  let body: unknown;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ jsonrpc: '2.0', error: { code: -32700, message: 'Parse error' }, id: null });
+  }
 
   // Extract params from JSON-RPC request body
   let params: unknown[] = [];
@@ -58,10 +65,17 @@ app.get('/api/topics:list', (c) => {
 // Serve static debug page
 app.use('/*', serveStatic({ root: './apps/server/public' }));
 
+const server = serve({ fetch: app.fetch, port: HTTP_PORT });
+
 // Graceful shutdown — close hub, recorder, bridge, kill children
 process.on('SIGTERM', async () => {
   await close();
+  server.close();
   process.exit(0);
 });
 
-serve({ fetch: app.fetch, port: HTTP_PORT });
+process.on('SIGINT', async () => {
+  await close();
+  server.close();
+  process.exit(0);
+});

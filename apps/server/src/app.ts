@@ -63,12 +63,12 @@ async function createApp(): Promise<ServerComponents> {
   hub.registerPlugin('base', formatSocketPath('base'));
 
   // Hook recorder to hub call/result events
-  hub.onCall((_plugin: string, method: string, params: unknown[]) => {
-    topicBus.publish(`/rpc/${method}/request`, { plugin: _plugin, method, params });
+  hub.onCall((plugin: string, method: string, params: unknown[]) => {
+    topicBus.publish(`/rpc/${method}/request`, { plugin, method, params });
     recorder.record(`/rpc/${method}`, { method, params, result: null });
   });
-  hub.onResult((_plugin: string, method: string, result: unknown) => {
-    topicBus.publish(`/rpc/${method}/response`, { plugin: _plugin, method, result });
+  hub.onResult((plugin: string, method: string, result: unknown) => {
+    topicBus.publish(`/rpc/${method}/response`, { plugin, method, result });
     recorder.record(`/rpc/${method}`, { method, params: [], result });
   });
 
@@ -89,6 +89,10 @@ async function createApp(): Promise<ServerComponents> {
     bridge.close();
     for (const p of pluginsToKill) {
       p.kill('SIGTERM');
+    }
+    await new Promise(resolve => setTimeout(resolve, 5000));
+    for (const p of pluginsToKill) {
+      try { p.kill('SIGKILL'); } catch { /* already dead */ }
     }
   }
 
