@@ -59,9 +59,9 @@
 - ✅ TypeScript LSP 已配置（typescript-language-server v5.3.0）
 - ✅ C++ 工具链配置已创建（.clangd / .clang-format / .clang-tidy）
 - ✅ CodeGraph MCP 已配置并初始化（@colbymchenry/codegraph v1.1.4, 16文件/380节点/850边）
-- ✅ CodeGraph MCP 启动脚本（scripts/codegraph-mcp.sh，自动探测 nvm/brew/直装）
+- ✅ CodeGraph MCP 启动脚本（`.opencode/init-codegraph-mcp.sh`，自动探测 nvm/brew/直装）
 - ✅ LSP 全套配置（7 个语言服务器：clangd, typescript-language-server, pyright, bash-language-server, rust-analyzer, html-language-server, remark-language-server）
-- ✅ LSP 安装检查脚本（`scripts/install-lsp.sh`，208 行，幂等，覆盖全部 7 个 LSP）
+- ✅ LSP 安装检查脚本（`.opencode/init-lsp.sh`，208 行，幂等，覆盖全部 7 个 LSP）
 - ✅ C++ 工具链配置文件（`.clangd` + `.clang-format` + `.clang-tidy`）
 - ✅ AI 工具使用优先级规则（AGENTS.md 中新增章节：codegraph > lsp > ast_grep > grep）
 - ✅ ADR-006 架构决策记录（AI 代码智能工具链配置）

@@ -118,4 +118,4 @@
 
 **问题**: `opencode.json` 中 codegraph MCP 的 command 使用 `&&` 链连接 nvm source 和 npx 执行。当 nvm 未安装时（`[ -s "$NVM_DIR/nvm.sh" ]` 返回 false），`&&` 链短路，`exec npx` 永远不执行，MCP 进程启动后立即退出。
 
-**解决**: ✅ 已解决（2026-06-30）— 创建 `scripts/codegraph-mcp.sh` 包装脚本，自动探测 nvm/brew/直装三种 Node.js 环境。`opencode.json` command 改为 `["bash", "scripts/codegraph-mcp.sh"]`。
+**解决**: ✅ 已解决（2026-06-30）— 创建 `.opencode/init-codegraph-mcp.sh` 包装脚本，自动探测 nvm/brew/直装三种 Node.js 环境。`opencode.json` command 改为 `["bash", ".opencode/init-codegraph-mcp.sh"]`。

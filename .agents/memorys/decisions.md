@@ -91,7 +91,7 @@
 
 **决策**: 采用三层已就位方案，暂不引入额外工具：
 
-1. **LSP 层**：配置 7 个语言服务器（clangd/typescript-language-server/pyright/bash-language-server/rust-analyzer/html-language-server/remark-language-server），提供 `lsp_diagnostics`/`lsp_goto_definition`/`lsp_find_references`/`lsp_rename`/`lsp_symbols` 工具（来自 oh-my-opencode 插件）。`scripts/install-lsp.sh` 提供幂等安装检查。
+1. **LSP 层**：配置 7 个语言服务器（clangd/typescript-language-server/pyright/bash-language-server/rust-analyzer/html-language-server/remark-language-server），提供 `lsp_diagnostics`/`lsp_goto_definition`/`lsp_find_references`/`lsp_rename`/`lsp_symbols` 工具（来自 oh-my-opencode 插件）。`.opencode/init-lsp.sh` 提供幂等安装检查。
 2. **代码图谱层**：使用 `@colbymchenry/codegraph` v1.1.4 MCP（已配置并初始化，16 文件 / 380 节点 / 850 边）。单一工具 `codegraph_explore` 返回源码 + 调用链 + 影响范围。零外部依赖，SQLite 存储。
 3. **AST 搜索层**：`ast_grep_search` + `ast_grep_replace`（来自 oh-my-opencode 插件，已就位）。
 4. **代理编排层**：oh-my-opencode 插件提供 explore/oracle/librarian/metis/momus 等专业代理（已就位）。

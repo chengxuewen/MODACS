@@ -52,7 +52,7 @@
     "codegraph": {
       "type": "local",
       "enabled": true,
-      "command": ["bash", "scripts/codegraph-mcp.sh"]
+      "command": ["bash", ".opencode/init-codegraph-mcp.sh"]
     }
   },
   "lsp": {
