@@ -63,10 +63,27 @@ function createBridge(topicBus?: TopicBus, port: number = DEFAULT_PORT): Foxglov
     const encoder = new TextEncoder();
 
     const unsub = bus.subscribe(topic, (data: unknown) => {
+      let payload: unknown = data;
+      // Transform log entries to foxglove.Log format for Log panel compatibility
+      if (topic.startsWith('/log/') && typeof data === 'object' && data !== null) {
+        const d = data as Record<string, unknown>;
+        const time = (d.time as number) ?? Date.now();
+        const sec = Math.floor(time / 1000);
+        const nsec = (time % 1000) * 1_000_000;
+        payload = {
+          timestamp: { sec, nsec },
+          level: { error: 8, warn: 4, info: 2, debug: 1 }[String(d.level)] ?? 2,
+          name: d.name ?? '',
+          msg: d.msg ?? '',
+          file: d.file ?? '',
+          function: d.function ?? '',
+          line: (d.line as number) ?? 0,
+        };
+      }
       server.sendMessage(
         channelId,
         BigInt(Date.now()) * 1_000_000n,
-        encoder.encode(JSON.stringify(data)),
+        encoder.encode(JSON.stringify(payload)),
       );
     }, `foxglove-${topic}`);
 
@@ -84,11 +101,12 @@ function createBridge(topicBus?: TopicBus, port: number = DEFAULT_PORT): Foxglov
   function ensureChannel(topic: string): void {
     if (topicToChannel.has(topic)) return;
 
+    const isLogTopic = topic.startsWith('/log/');
     const chanId = server.addChannel({
       topic,
       encoding: 'json',
-      schemaName: 'JSON',
-      schema: JSON.stringify({ type: 'object' }),
+      schemaName: isLogTopic ? 'foxglove.Log' : 'JSON',
+      schema: isLogTopic ? '{"type":"object","properties":{"timestamp":{"type":"object","properties":{"sec":{"type":"integer"},"nsec":{"type":"integer"}}},"level":{"type":"integer"},"name":{"type":"string"},"msg":{"type":"string"},"file":{"type":"string"},"function":{"type":"string"},"line":{"type":"integer"}}}' : JSON.stringify({ type: 'object' }),
     });
 
     topicToChannel.set(topic, chanId);
