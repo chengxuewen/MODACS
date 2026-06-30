@@ -11,7 +11,8 @@ export const APPLICATION_ERROR = -32000;
 
 export const SOCKET_BASE = '/tmp/modacs/';
 export function formatSocketPath(name: string): string {
-  return `${SOCKET_BASE}${name}.sock`;
+  const safe = name.replace(/[^a-zA-Z0-9_-]/g, '_');
+  return `${SOCKET_BASE}${safe}.sock`;
 }
 
 export interface JsonRpcRequest {

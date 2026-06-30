@@ -12,6 +12,7 @@ const logger = createLogger('foxglove-bridge');
 
 const DEFAULT_PORT = 8765;
 const MAX_RETRIES = 5;
+const MAX_CLIENTS = 5;
 
 interface FoxgloveBridge {
   broadcast(method: string, params: unknown[], result: unknown): void;
@@ -40,12 +41,16 @@ function createBridge(port: number = DEFAULT_PORT): FoxgloveBridge {
 
   function tryStart(): void {
     const tryPort = port + attempt;
-    const wss = new WebSocketServer({ port: tryPort });
+    const wss = new WebSocketServer({ port: tryPort, host: '127.0.0.1' });
 
     wss.on('listening', () => {
       server = wss;
       logger.info('Foxglove bridge listening', { port: tryPort });
       wss.on('connection', (ws: WebSocket) => {
+        if (wss.clients.size > MAX_CLIENTS) {
+          ws.close(1013, 'Too many connections');
+          return;
+        }
         logger.debug('Foxglove client connected');
         ws.on('close', () => logger.debug('Foxglove client disconnected'));
       });
@@ -53,10 +58,12 @@ function createBridge(port: number = DEFAULT_PORT): FoxgloveBridge {
 
     wss.on('error', (err: NodeJS.ErrnoException) => {
       if (err.code === 'EADDRINUSE' && attempt < MAX_RETRIES) {
+        wss.close();
         attempt++;
         tryStart();
       } else {
-        logger.warn('Foxglove bridge disabled — could not bind port', { err });
+        wss.close();
+        logger.warn('Foxglove bridge disabled', { err: err.message });
       }
     });
   }

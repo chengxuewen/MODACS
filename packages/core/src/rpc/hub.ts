@@ -7,8 +7,6 @@
 
 import { createLogger } from '../logger.ts';
 import {
-  serializeRequest,
-  parseResponse,
   createError,
   METHOD_NOT_FOUND,
   INTERNAL_ERROR,
@@ -26,6 +24,7 @@ type ResultHook = (plugin: string, method: string, result: JsonRpcResponse | Jso
 /** Central RPC router for plugin communication. */
 interface Hub {
   registerPlugin(name: string, socketPath: string): void;
+  unregisterPlugin(name: string): void;
   call(plugin: string, method: string, params: unknown[]): Promise<JsonRpcResponse | JsonRpcError>;
   broadcast(method: string, params: unknown[]): Promise<(JsonRpcResponse | JsonRpcError)[]>;
   onCall(callback: CallHook): void;
@@ -63,11 +62,10 @@ function createHub(): Hub {
 
     try {
       const client = getOrCreateClient(plugin);
-      logger.debug('RPC dispatch', { plugin, method, req: serializeRequest(method, params) });
+      logger.debug('RPC dispatch', { plugin, method, paramCount: params.length });
       const result = await client.call(method, params);
       // Construct and validate JSON-RPC response envelope
-      const raw = JSON.stringify({ jsonrpc: '2.0' as const, result, id: Date.now() });
-      const response = parseResponse(raw, logger);
+      const response: JsonRpcResponse = { jsonrpc: '2.0', result, id: Date.now() };
       for (const cb of resultHooks) cb(plugin, method, response);
       return response;
     } catch (e) {
@@ -97,6 +95,16 @@ function createHub(): Hub {
     logger.info('Plugin registered', { name, socketPath });
   }
 
+  function unregisterPlugin(name: string): void {
+    const client = clients.get(name);
+    if (client) {
+      client.close();
+      clients.delete(name);
+    }
+    plugins.delete(name);
+    logger.info('Plugin unregistered', { name });
+  }
+
   function onCall(callback: CallHook): void {
     callHooks.push(callback);
   }
@@ -105,7 +113,7 @@ function createHub(): Hub {
     resultHooks.push(callback);
   }
 
-  return { registerPlugin, call, broadcast, onCall, onResult };
+  return { registerPlugin, unregisterPlugin, call, broadcast, onCall, onResult };
 }
 
 export { createHub, type Hub, type CallHook, type ResultHook };

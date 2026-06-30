@@ -22,6 +22,7 @@ const RPC_SCHEMA = JSON.stringify({
 });
 
 const encoder = new TextEncoder();
+const MAX_QUEUE = 10_000;
 
 interface QueuedEvent {
   readonly timestamp: number;
@@ -64,6 +65,7 @@ export function createRecorder(dir: string): Recorder {
   let handle: FileHandle | null = null;
   const queue: QueuedEvent[] = [];
   let draining: Promise<void> = Promise.resolve();
+  let initFailed = false;
 
   const initPromise = (async (): Promise<void> => {
     handle = await fs.open(filename, 'w');
@@ -86,7 +88,10 @@ export function createRecorder(dir: string): Recorder {
       metadata: new Map(),
     });
     log.info('MCAP recording started', { filename });
-  })();
+  })().catch((err: unknown) => {
+    initFailed = true;
+    log.error('MCAP init failed, recording disabled', err);
+  });
 
   async function drain(): Promise<void> {
     await initPromise;
@@ -103,7 +108,11 @@ export function createRecorder(dir: string): Recorder {
   }
 
   function record(method: string, params: unknown[], result: unknown): void {
-    if (closed) return;
+    if (closed || initFailed) return;
+    if (queue.length >= MAX_QUEUE) {
+      queue.shift();
+      log.warn('Recorder queue full, dropping oldest event');
+    }
     queue.push({ timestamp: Date.now(), method, params, result });
     draining = draining.then(drain).catch((err: unknown) => {
       log.error('MCAP write failed', err);
@@ -113,9 +122,12 @@ export function createRecorder(dir: string): Recorder {
   async function close(): Promise<void> {
     closed = true;
     await draining;
-    await initPromise;
-    if (writer) await writer.end();
-    await handle?.close();
+    try {
+      await initPromise;
+      if (writer) await writer.end();
+    } finally {
+      await handle?.close();
+    }
     log.info('MCAP recording closed', { filename, messages: sequence });
   }
 

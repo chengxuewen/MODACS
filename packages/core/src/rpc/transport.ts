@@ -33,11 +33,22 @@ export type RequestHandler = (request: JsonRpcRequest) => Promise<unknown>;
 const RPC_TIMEOUT_MS = 2_000;
 const INITIAL_BACKOFF_MS = 1_000;
 const MAX_BACKOFF_MS = 30_000;
+const MAX_RECONNECT = 20;
+const MAX_BODY_SIZE = 1_000_000; // 1 MB
 
 function readBody(req: IncomingMessage): Promise<string> {
+  let totalBytes = 0;
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
-    req.on('data', (c: Buffer) => chunks.push(c));
+    req.on('data', (c: Buffer) => {
+      totalBytes += c.length;
+      if (totalBytes > MAX_BODY_SIZE) {
+        req.destroy();
+        reject(new Error('Request body too large'));
+        return;
+      }
+      chunks.push(c);
+    });
     req.on('error', reject);
     req.on('end', () => resolve(Buffer.concat(chunks).toString('utf-8')));
   });
@@ -88,20 +99,28 @@ function createServer(socketPath: string, onRequest: RequestHandler, logger: Log
 
 function createClient(socketPath: string, logger: Logger): RpcClient {
   let client = new UndiciClient('http://localhost', { socketPath });
-  let backoffMs = INITIAL_BACKOFF_MS;
+  let reconnectCount = 0;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   let closed = false;
 
   function scheduleReconnect(): void {
-    if (closed || reconnectTimer) return;
-    logger.warn('Connection lost, reconnecting', { socketPath, backoffMs });
+    if (closed || reconnectTimer || reconnectCount >= MAX_RECONNECT) {
+      if (reconnectCount >= MAX_RECONNECT) {
+        logger.error('Max reconnection attempts reached, giving up');
+      }
+      return;
+    }
+    reconnectCount++;
+    const delay = Math.min(INITIAL_BACKOFF_MS * Math.pow(2, reconnectCount - 1), MAX_BACKOFF_MS);
+    logger.warn('Connection lost, reconnecting', { socketPath, attempt: reconnectCount, delay });
     reconnectTimer = setTimeout(() => {
       reconnectTimer = null;
-      client.destroy().catch(() => {});
+      if (closed) return;
+      client.destroy().catch((err: unknown) => logger.debug('Client destroy error', err));
       client = new UndiciClient('http://localhost', { socketPath });
+      reconnectCount = 0;
       logger.info('RPC client reconnected', { socketPath });
-    }, backoffMs);
-    backoffMs = Math.min(backoffMs * 2, MAX_BACKOFF_MS);
+    }, delay);
   }
 
   async function call(method: string, params: unknown[] = []): Promise<unknown> {
@@ -122,7 +141,7 @@ function createClient(socketPath: string, logger: Logger): RpcClient {
       if ('error' in parsed) {
         throw Object.assign(new Error(parsed.error.message), { code: parsed.error.code });
       }
-      backoffMs = INITIAL_BACKOFF_MS;
+      reconnectCount = 0;
       return parsed.result;
     } catch (err) {
       if (!controller.signal.aborted) scheduleReconnect();
@@ -135,7 +154,7 @@ function createClient(socketPath: string, logger: Logger): RpcClient {
   function close(): void {
     closed = true;
     if (reconnectTimer) clearTimeout(reconnectTimer);
-    client.close().catch(() => {});
+    client.close().catch((err: unknown) => logger.debug('Client close error', err));
     logger.info('RPC client closed', { socketPath });
   }
 

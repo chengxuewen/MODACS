@@ -23,29 +23,22 @@ interface ProcessRecord {
 
 const records = new Map<number, ProcessRecord>();
 const children = new Map<number, ChildProcess>();
-let sigtermInstalled = false;
 let isShuttingDown = false;
 
-function installSigtermHandler(): void {
-  if (sigtermInstalled) return;
-  sigtermInstalled = true;
-  process.once('SIGTERM', () => {
-    isShuttingDown = true;
-    log.info('Received SIGTERM, shutting down children');
-    for (const [pid, child] of children) {
-      const rec = records.get(pid);
-      if (rec) rec.killed = true;
+export function killAllChildren(): void {
+  isShuttingDown = true;
+  for (const child of children.values()) {
+    if (child.exitCode === null && child.signalCode === null) {
       child.kill('SIGTERM');
     }
-    setTimeout(() => {
-      for (const child of children.values()) {
-        if (child.exitCode === null && child.signalCode === null) {
-          child.kill('SIGKILL');
-        }
+  }
+  setTimeout(() => {
+    for (const child of children.values()) {
+      if (child.exitCode === null && child.signalCode === null) {
+        child.kill('SIGKILL');
       }
-      process.exit(0);
-    }, 5000);
-  });
+    }
+  }, 5000);
 }
 
 export function spawn(scriptPath: string, env?: Record<string, string>): ManagedProcess {
@@ -54,7 +47,6 @@ export function spawn(scriptPath: string, env?: Record<string, string>): Managed
   const forkOptions = mergedEnv ? { env: mergedEnv } : undefined;
   let currentPid = 0;
   let stableTimer: NodeJS.Timeout | undefined;
-  installSigtermHandler();
 
   function doRespawn(newChild: ChildProcess): void {
     currentPid = newChild.pid!;
@@ -71,8 +63,9 @@ export function spawn(scriptPath: string, env?: Record<string, string>): Managed
     children.delete(currentPid);
     if (record.killed) return;
     if (record.restartCount >= 3) {
-      log.error(`Process ${scriptPath} exceeded max restarts, exiting`);
-      process.exit(1);
+      log.error(`Process ${scriptPath} exceeded max restarts, disabling`);
+      record.killed = true;
+      return;
     }
     scheduleRestart();
   }
