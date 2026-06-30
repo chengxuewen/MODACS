@@ -95,7 +95,8 @@ function createBridge(topicBus?: TopicBus, port: number = DEFAULT_PORT): Foxglov
     channelToTopic.set(chanId, topic);
 
     logger.debug('Channel advertised', { topic, chanId });
-    ensureTopicSubscribed(topic);
+    // TopicBus subscription deferred until Foxglove client connects
+    // (retained messages must reach CONNECTED clients, not empty server)
   }
 
   function pollTopics(): void {
@@ -150,13 +151,10 @@ function createBridge(topicBus?: TopicBus, port: number = DEFAULT_PORT): Foxglov
       server.handleConnection(conn as unknown as IWebSocket, name);
       logger.debug('Foxglove client connected');
 
-      // Send welcome data for all advertised channels so Foxglove marks them available
-      const encoder = new TextEncoder();
-      for (const [topic, chanId] of topicToChannel) {
-        const welcomeData = { level: 'info', name: 'foxglove-bridge', msg: 'channel available', channel: topic, time: Date.now() };
-        try {
-          server.sendMessage(chanId, BigInt(Date.now()) * 1_000_000n, encoder.encode(JSON.stringify(welcomeData)));
-        } catch { /* best-effort — channel might not be ready */ }
+      // Subscribe to all TopicBus topics NOW (client is connected)
+      // TopicBus replays retained messages → they reach the Foxglove client
+      for (const topic of topicToChannel.keys()) {
+        ensureTopicSubscribed(topic);
       }
     });
 
