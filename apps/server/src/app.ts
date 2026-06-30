@@ -18,6 +18,8 @@ import type { ManagedProcess } from '../../../packages/core/src/process-manager.
 import type { Hub } from '../../../packages/core/src/rpc/hub.ts';
 import type { Recorder } from '../../../packages/core/src/recorder.ts';
 import type { FoxgloveBridge } from '../../../packages/core/src/foxglove-bridge.ts';
+import { existsSync } from 'node:fs';
+
 
 export interface ServerComponents {
   hub: Hub;
@@ -26,7 +28,7 @@ export interface ServerComponents {
   close: () => Promise<void>;
 }
 
-function createApp(): ServerComponents {
+async function createApp(): Promise<ServerComponents> {
   const logger = createLogger('modacs-server');
   const hub = createHub();
   const recorder = createRecorder('/tmp/modacs/recordings');
@@ -38,6 +40,20 @@ function createApp(): ServerComponents {
     MODACS_PLUGIN_NAME: 'base',
   });
   pluginsToKill.push(baseProcess);
+
+  // Wait for base plugin's UDS socket to be ready (max 5 seconds)
+  const baseSocket = formatSocketPath('base');
+  for (let i = 0; i < 50; i++) {
+    if (existsSync(baseSocket)) {
+      logger.info('Base plugin socket ready', { socket: baseSocket });
+      break;
+    }
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  if (!existsSync(baseSocket)) {
+    throw new Error(`Base plugin socket ${baseSocket} not created within 5s timeout`);
+  }
+
 
   // Register base plugin socket path with hub
   hub.registerPlugin('base', formatSocketPath('base'));

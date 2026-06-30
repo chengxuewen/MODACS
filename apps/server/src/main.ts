@@ -25,7 +25,7 @@ for (const name of staleSockets) {
   }
 }
 
-const { hub, close } = createApp();
+const { hub, close } = await createApp();
 
 const app = new Hono();
 
