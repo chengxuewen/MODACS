@@ -12,6 +12,7 @@ import { createLogger } from '../../../packages/core/src/logger.ts';
 import { createHub } from '../../../packages/core/src/rpc/hub.ts';
 import { spawn } from '../../../packages/core/src/process-manager.ts';
 import { createRecorder } from '../../../packages/core/src/recorder.ts';
+import { createTopicBus } from '../../../packages/core/src/topic-bus.ts';
 import { createBridge } from '../../../packages/core/src/foxglove-bridge.ts';
 import { formatSocketPath } from '../../../packages/core/src/rpc/protocol.ts';
 import type { ManagedProcess } from '../../../packages/core/src/process-manager.ts';
@@ -31,7 +32,8 @@ export interface ServerComponents {
 async function createApp(): Promise<ServerComponents> {
   const logger = createLogger('modacs-server');
   const hub = createHub();
-  const recorder = createRecorder('/tmp/modacs/recordings');
+  const topicBus = createTopicBus();
+  const recorder = createRecorder('/tmp/modacs/recordings', topicBus);
   const bridge = createBridge();
   const pluginsToKill: ManagedProcess[] = [];
 
@@ -60,10 +62,10 @@ async function createApp(): Promise<ServerComponents> {
 
   // Hook recorder to hub call/result events
   hub.onCall((_plugin: string, method: string, params: unknown[]) => {
-    recorder.record(method, params, null);
+    recorder.record(`/rpc/${method}`, { method, params, result: null });
   });
   hub.onResult((_plugin: string, method: string, result: unknown) => {
-    recorder.record(method, [], result);
+    recorder.record(`/rpc/${method}`, { method, params: [], result });
   });
 
   logger.info('Server components assembled', {

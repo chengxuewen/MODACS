@@ -14,6 +14,8 @@ import {
   type JsonRpcError,
 } from './protocol.ts';
 import { createClient, type RpcClient } from './transport.ts';
+import { createTopicBus, type TopicBus } from '../topic-bus.ts';
+import { topicForRpc } from '../topic-types.ts';
 
 /** Called BEFORE dispatching an RPC — receives plugin, method, params. */
 type CallHook = (plugin: string, method: string, params: unknown[]) => void;
@@ -29,6 +31,7 @@ interface Hub {
   broadcast(method: string, params: unknown[]): Promise<(JsonRpcResponse | JsonRpcError)[]>;
   onCall(callback: CallHook): void;
   onResult(callback: ResultHook): void;
+  topicBus: TopicBus;
 }
 
 function createHub(): Hub {
@@ -37,6 +40,17 @@ function createHub(): Hub {
   const clients = new Map<string, RpcClient>();
   const callHooks: CallHook[] = [];
   const resultHooks: ResultHook[] = [];
+
+  const topicBus = createTopicBus();
+
+  /** Publish to the topic bus without letting topic errors break RPC flow. */
+  function safePublish(topic: string, data: unknown): void {
+    try {
+      topicBus.publish(topic, data);
+    } catch (err) {
+      logger.debug('topic publish failed', err);
+    }
+  }
 
   function getOrCreateClient(name: string): RpcClient {
     let client = clients.get(name);
@@ -59,6 +73,7 @@ function createHub(): Hub {
       for (const cb of resultHooks) cb(plugin, method, err);
       return err;
     }
+    safePublish(topicForRpc(method), { plugin, method, params });
 
     try {
       const client = getOrCreateClient(plugin);
@@ -67,12 +82,14 @@ function createHub(): Hub {
       // Construct and validate JSON-RPC response envelope
       const response: JsonRpcResponse = { jsonrpc: '2.0', result, id: Date.now() };
       for (const cb of resultHooks) cb(plugin, method, response);
+      safePublish(`${topicForRpc(method)}/result`, { plugin, method, result: response });
       return response;
     } catch (e) {
       const code = (e as { code?: number })?.code ?? INTERNAL_ERROR;
       const message = e instanceof Error ? e.message : 'Unknown RPC error';
       const err = createError(code, message);
       for (const cb of resultHooks) cb(plugin, method, err);
+      safePublish(`${topicForRpc(method)}/result`, { plugin, method, result: err });
       return err;
     }
   }
@@ -113,7 +130,7 @@ function createHub(): Hub {
     resultHooks.push(callback);
   }
 
-  return { registerPlugin, unregisterPlugin, call, broadcast, onCall, onResult };
+  return { registerPlugin, unregisterPlugin, call, broadcast, onCall, onResult, topicBus };
 }
 
 export { createHub, type Hub, type CallHook, type ResultHook };
