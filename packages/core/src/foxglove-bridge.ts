@@ -95,6 +95,7 @@ function createBridge(topicBus?: TopicBus, port: number = DEFAULT_PORT): Foxglov
     channelToTopic.set(chanId, topic);
 
     logger.debug('Channel advertised', { topic, chanId });
+    ensureTopicSubscribed(topic);
   }
 
   function pollTopics(): void {
