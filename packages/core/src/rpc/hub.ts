@@ -40,8 +40,8 @@ interface Hub {
   subscribeForPlugin(pluginName: string, topic: string): () => void;
 }
 
-function createHub(): Hub {
-  const topicBus = createTopicBus();
+function createHub(existingTopicBus?: TopicBus): Hub {
+  const topicBus = existingTopicBus ?? createTopicBus();
   const logger = createLogger('rpc-hub', topicBus);
   const plugins = new Map<string, string>();
   const clients = new Map<string, RpcClient>();
