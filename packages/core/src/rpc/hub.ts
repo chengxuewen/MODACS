@@ -41,13 +41,12 @@ interface Hub {
 }
 
 function createHub(): Hub {
-  const logger = createLogger('rpc-hub');
+  const topicBus = createTopicBus();
+  const logger = createLogger('rpc-hub', topicBus);
   const plugins = new Map<string, string>();
   const clients = new Map<string, RpcClient>();
   const callHooks: CallHook[] = [];
   const resultHooks: ResultHook[] = [];
-
-  const topicBus = createTopicBus();
 
   /** Publish to the topic bus without letting topic errors break RPC flow. */
   function safePublish(topic: string, data: unknown): void {

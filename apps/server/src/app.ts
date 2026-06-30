@@ -32,9 +32,9 @@ export interface ServerComponents {
 }
 
 async function createApp(): Promise<ServerComponents> {
-  const logger = createLogger('modacs-server');
-  const hub = createHub();
   const topicBus = createTopicBus();
+  const logger = createLogger('modacs-server', topicBus);
+  const hub = createHub();
   const recorder = createRecorder('/tmp/modacs/recordings', topicBus);
   const bridge = createBridge(topicBus);
   const pluginsToKill: ManagedProcess[] = [];

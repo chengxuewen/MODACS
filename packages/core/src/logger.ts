@@ -4,6 +4,7 @@
  * Zero external dependencies — uses console.log / console.error internally.
  * Each call writes exactly one JSON object line, safe for multi-process stdout.
  */
+import type { TopicBus } from './topic-bus.ts';
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
@@ -14,7 +15,7 @@ interface Logger {
   debug(msg: string, ...meta: unknown[]): void;
 }
 
-function createLogger(name: string): Logger {
+function createLogger(name: string, topicBus?: TopicBus): Logger {
   const loggerName = name;
 
   function write(level: LogLevel, msg: string, ...args: unknown[]): void {
@@ -43,6 +44,9 @@ function createLogger(name: string): Logger {
       console.error(serialized);
     } else {
       console.log(serialized);
+    }
+    if (topicBus) {
+      topicBus.publish(`/log/${loggerName}`, entry);
     }
   }
 
