@@ -70,6 +70,9 @@ async function createApp(): Promise<ServerComponents> {
     recorder.record(`/rpc/${method}`, { method, params: [], result });
   });
 
+
+  // Warmup: populate TopicBus with known topics for Foxglove bridge discovery
+  await hub.call('base', 'echo', ['warmup']);
   logger.info('Server components assembled', {
     plugin: 'base',
     socket: formatSocketPath('base'),
