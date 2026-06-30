@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MODACS Topic Graph</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #1a1a2e; color: #e0e0e0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  min-height: 100vh; display: flex; flex-direction: column;
+}
+header {
+  padding: 16px 24px; border-bottom: 1px solid #0f3460;
+  display: flex; align-items: center; justify-content: space-between;
+}
+h1 { font-size: 1.2rem; color: #a0a0c0; }
+.status { font-size: 0.8rem; color: #888; }
+.status .count { color: #4488ff; }
+main {
+  flex: 1; display: flex; justify-content: center;
+  align-items: center; padding: 0; overflow: hidden;
+}
+svg { width: 100%; height: 100%; }
+.legend {
+  background: #16213e; border-top: 1px solid #0f3460;
+  padding: 12px 24px; display: flex; gap: 24px;
+  justify-content: center; font-size: 0.8rem; color: #a0a0c0;
+  flex-wrap: wrap;
+}
+.legend-item { display: flex; align-items: center; gap: 6px; }
+.legend-pub { width: 12px; height: 12px; border-radius: 50%; background: #4488ff; }
+.legend-topic { width: 12px; height: 12px; border-radius: 3px; background: #00cc66; }
+.legend-solid { width: 24px; height: 2px; background: #555; }
+.legend-dashed { width: 24px; border-bottom: 2px dashed #555; height: 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>MODACS Topic Graph</h1>
+  <div class="status" id="status">Loading…</div>
+</header>
+<main>
+  <svg id="graph" xmlns="http://www.w3.org/2000/svg"></svg>
+</main>
+<div class="legend">
+  <div class="legend-item"><span class="legend-pub"></span> Publisher</div>
+  <div class="legend-item"><span class="legend-topic"></span> Topic</div>
+  <div class="legend-item"><span class="legend-solid"></span> Publish</div>
+  <div class="legend-item"><span class="legend-dashed"></span> Subscribe</div>
+</div>
+<script>
+const NS = 'http://www.w3.org/2000/svg';
+const svg = document.getElementById('graph');
+const statusEl = document.getElementById('status');
+
+const COLORS = {
+  publisher: '#4488ff',
+  topic: '#00cc66',
+  edge: '#555',
+  edgeHighlight: '#4488ff',
+  text: '#a0a0c0',
+  textHighlight: '#e0e0e0',
+};
+
+const LAYOUT = { leftX: 100, centerX: 420, rightX: 740, yStart: 60, yGap: 64, nodeR: 14, topicW: 140, topicH: 28 };
+
+let edges = []; // {id, from, to, type:'publish'|'subscribe', el}
+let nodes = {}; // name → {x, y, el, labelEl, type}
+let selectedId = null;
+
+function createEl(tag) {
+  return document.createElementNS(NS, tag);
+}
+
+function setAttrs(el, attrs) {
+  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+}
+
+function render(topics) {
+  // Clear
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+  edges = [];
+  nodes = {};
+  selectedId = null;
+
+  if (!topics || topics.length === 0) {
+    const text = createEl('text');
+    setAttrs(text, { x: '400', y: '300', 'text-anchor': 'middle', fill: '#666', 'font-size': '14' });
+    text.textContent = 'No topics active. Run an echo RPC to see data.';
+    svg.appendChild(text);
+    setViewBox(800, 600);
+    statusEl.innerHTML = '<span class="count">0</span> topics';
+    return;
+  }
+
+  // Collect unique names
+  const pubSet = new Set();
+  const subSet = new Set();
+  const topicSet = new Set();
+  for (const t of topics) {
+    topicSet.add(t.topic);
+    for (const p of t.publishers) pubSet.add(p);
+    for (const s of t.subscribers) subSet.add(s);
+  }
+
+  // Classify publishers (left) vs pure-subscribers (right)
+  const pureSubs = [...subSet].filter(s => !pubSet.has(s));
+  const pubs = [...pubSet];
+  const topicList = [...topicSet];
+
+  const totalHeight = Math.max(pubs.length, topicList.length, pureSubs.length) * LAYOUT.yGap + LAYOUT.yStart * 2;
+  setViewBox(900, Math.max(totalHeight, 400));
+
+  // Node name → {x, y, type}
+  const positions = {};
+
+  // Position publishers (left)
+  pubs.forEach((name, i) => {
+    positions[name] = { x: LAYOUT.leftX, y: LAYOUT.yStart + i * LAYOUT.yGap, type: 'publisher' };
+  });
+
+  // Position topics (center)
+  topicList.forEach((name, i) => {
+    positions[name] = { x: LAYOUT.centerX, y: LAYOUT.yStart + i * LAYOUT.yGap, type: 'topic' };
+  });
+
+  // Position pure-subscribers (right)
+  pureSubs.forEach((name, i) => {
+    positions[name] = { x: LAYOUT.rightX, y: LAYOUT.yStart + i * LAYOUT.yGap, type: 'subscriber' };
+  });
+
+  // Create edge group (behind nodes)
+  const edgeGroup = createEl('g');
+  svg.appendChild(edgeGroup);
+
+  // Create node group (on top)
+  const nodeGroup = createEl('g');
+  svg.appendChild(nodeGroup);
+
+  // Helper: get node id
+  function nodeId(name) {
+    if (pubSet.has(name)) return 'pub-' + name;
+    if (subSet.has(name)) return 'sub-' + name;
+    return 'topic-' + name;
+  }
+
+  // Draw edges
+  for (const t of topics) {
+    const tp = positions[t.topic];
+    if (!tp) continue;
+
+    // Publisher → Topic (solid)
+    for (const p of t.publishers) {
+      const pp = positions[p];
+      if (!pp) continue;
+      const line = createEl('line');
+      setAttrs(line, { x1: pp.x, y1: pp.y, x2: tp.x, y2: tp.y, stroke: COLORS.edge, 'stroke-width': '1.5', 'stroke-dasharray': 'none' });
+      line.setAttribute('data-edge-id', 'edge-' + edges.length);
+      edgeGroup.appendChild(line);
+      edges.push({ id: 'edge-' + edges.length, from: nodeId(p), to: nodeId(t.topic), type: 'publish', el: line });
+    }
+
+    // Topic → Subscriber (dashed)
+    for (const s of t.subscribers) {
+      const sp = positions[s];
+      if (!sp) continue;
+      const line = createEl('line');
+      setAttrs(line, { x1: tp.x, y1: tp.y, x2: sp.x, y2: sp.y, stroke: COLORS.edge, 'stroke-width': '1', 'stroke-dasharray': '6,4' });
+      line.setAttribute('data-edge-id', 'edge-' + edges.length);
+      edgeGroup.appendChild(line);
+      edges.push({ id: 'edge-' + edges.length, from: nodeId(t.topic), to: nodeId(s), type: 'subscribe', el: line });
+    }
+  }
+
+  // Draw nodes
+  for (const [name, pos] of Object.entries(positions)) {
+    const id = nodeId(name);
+    const g = createEl('g');
+    g.setAttribute('data-node-id', id);
+    g.style.cursor = 'pointer';
+
+    if (pos.type === 'topic') {
+      // Green rounded rectangle
+      const rect = createEl('rect');
+      setAttrs(rect, {
+        x: pos.x - LAYOUT.topicW / 2, y: pos.y - LAYOUT.topicH / 2,
+        width: LAYOUT.topicW, height: LAYOUT.topicH,
+        rx: '6', ry: '6', fill: COLORS.topic, opacity: '0.85'
+      });
+      g.appendChild(rect);
+      // Label inside
+      const label = createEl('text');
+      setAttrs(label, { x: pos.x, y: pos.y + 4, 'text-anchor': 'middle', fill: '#0d1f0d', 'font-size': '10', 'font-family': 'monospace' });
+      label.textContent = truncate(name, 22);
+      g.appendChild(label);
+      nodes[id] = { ...pos, el: g, labelEl: label };
+    } else {
+      // Blue circle
+      const circle = createEl('circle');
+      setAttrs(circle, { cx: pos.x, cy: pos.y, r: LAYOUT.nodeR, fill: COLORS.publisher, opacity: '0.9' });
+      g.appendChild(circle);
+      // Label below
+      const label = createEl('text');
+      setAttrs(label, { x: pos.x, y: pos.y + LAYOUT.nodeR + 14, 'text-anchor': 'middle', fill: COLORS.text, 'font-size': '10' });
+      label.textContent = truncate(name, 18);
+      g.appendChild(label);
+      nodes[id] = { ...pos, el: g, labelEl: label };
+    }
+
+    g.addEventListener('click', () => highlightNode(id));
+    nodeGroup.appendChild(g);
+  }
+
+  statusEl.innerHTML = '<span class="count">' + topicList.length + '</span> topics · ' +
+    pubs.length + ' publishers · ' + pureSubs.length + ' subscribers';
+}
+
+function setViewBox(w, h) {
+  svg.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
+  svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+}
+
+function truncate(s, max) {
+  return s.length > max ? s.slice(0, max - 2) + '…' : s;
+}
+
+function highlightNode(id) {
+  // Reset all
+  for (const n of Object.values(nodes)) {
+    if (n.el.firstChild) n.el.firstChild.setAttribute('opacity', '0.9');
+    if (n.labelEl) n.labelEl.setAttribute('fill', COLORS.text);
+  }
+  for (const e of edges) {
+    e.el.setAttribute('stroke', COLORS.edge);
+    e.el.setAttribute('stroke-width', e.type === 'publish' ? '1.5' : '1');
+  }
+
+  if (selectedId === id) {
+    selectedId = null;
+    return;
+  }
+  selectedId = id;
+
+  // Highlight selected node
+  const node = nodes[id];
+  if (node) {
+    if (node.el.firstChild) node.el.firstChild.setAttribute('opacity', '1');
+    if (node.labelEl) node.labelEl.setAttribute('fill', COLORS.textHighlight);
+  }
+
+  // Highlight connected edges
+  for (const e of edges) {
+    if (e.from === id || e.to === id) {
+      e.el.setAttribute('stroke', COLORS.edgeHighlight);
+      e.el.setAttribute('stroke-width', '2.5');
+      // Highlight connected node at other end
+      const otherId = e.from === id ? e.to : e.from;
+      const other = nodes[otherId];
+      if (other) {
+        if (other.el.firstChild) other.el.firstChild.setAttribute('opacity', '1');
+        if (other.labelEl) other.labelEl.setAttribute('fill', COLORS.textHighlight);
+      }
+    }
+  }
+}
+
+async function refresh() {
+  try {
+    const res = await fetch('/api/topics:list');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const topics = await res.json();
+    render(topics);
+    statusEl.style.color = '#888';
+  } catch (err) {
+    statusEl.textContent = 'Error: ' + err.message;
+    statusEl.style.color = '#ff3355';
+  }
+}
+
+refresh();
+setInterval(refresh, 3000);
+</script>
+</body>
+</html>
