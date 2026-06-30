@@ -13,6 +13,7 @@ import type { TopicBus } from './topic-bus.ts';
 import { FoxgloveServer } from '@foxglove/ws-protocol';
 import type { IWebSocket } from '@foxglove/ws-protocol';
 import { WebSocketServer } from 'ws';
+import { Log as FoxgloveLogSchema } from '@foxglove/schemas/dist/jsonschema.js';
 
 const logger = createLogger('foxglove-bridge');
 
@@ -72,11 +73,10 @@ function createBridge(topicBus?: TopicBus, port: number = DEFAULT_PORT): Foxglov
         const nsec = (time % 1000) * 1_000_000;
         payload = {
           timestamp: { sec, nsec },
-          level: { error: 8, warn: 4, info: 2, debug: 1 }[String(d.level)] ?? 2,
+          level: { error: 4, warn: 3, info: 2, debug: 1 }[String(d.level)] ?? 0,
           name: d.name ?? '',
-          msg: d.msg ?? '',
+          message: (d.msg ?? d.message ?? '') as string,
           file: d.file ?? '',
-          function: d.function ?? '',
           line: (d.line as number) ?? 0,
         };
       }
@@ -106,7 +106,7 @@ function createBridge(topicBus?: TopicBus, port: number = DEFAULT_PORT): Foxglov
       topic,
       encoding: 'json',
       schemaName: isLogTopic ? 'foxglove.Log' : 'JSON',
-      schema: isLogTopic ? '{"type":"object","properties":{"timestamp":{"type":"object","properties":{"sec":{"type":"integer"},"nsec":{"type":"integer"}}},"level":{"type":"integer"},"name":{"type":"string"},"msg":{"type":"string"},"file":{"type":"string"},"function":{"type":"string"},"line":{"type":"integer"}}}' : JSON.stringify({ type: 'object' }),
+      schema: isLogTopic ? JSON.stringify(FoxgloveLogSchema) : JSON.stringify({ type: 'object' }),
     });
 
     topicToChannel.set(topic, chanId);
