@@ -1,7 +1,7 @@
 /**
  * Foxglove Bridge — optional WebSocket server for real-time debugging.
  *
- * Implements the standard Foxglove WebSocket protocol so Foxglove Studio
+ * Uses the official @foxglove/ws-protocol package so Foxglove Studio
  * can connect, discover topics, and subscribe to live data.
  *
  * Only active when MODACS_DEBUG=1. When disabled, returns a no-op bridge
@@ -10,7 +10,9 @@
 
 import { createLogger } from './logger.ts';
 import type { TopicBus } from './topic-bus.ts';
-import { WebSocketServer, WebSocket } from 'ws';
+import { FoxgloveServer } from '@foxglove/ws-protocol';
+import type { IWebSocket } from '@foxglove/ws-protocol';
+import { WebSocketServer } from 'ws';
 
 const logger = createLogger('foxglove-bridge');
 
@@ -20,7 +22,7 @@ const MAX_CLIENTS = 5;
 const POLL_INTERVAL_MS = 1000;
 
 interface FoxgloveBridge {
-  broadcast(method: string, params: unknown[], result: unknown): void;
+  broadcast(): void;
   close(): void;
 }
 
@@ -35,145 +37,126 @@ function createBridge(topicBus?: TopicBus, port: number = DEFAULT_PORT): Foxglov
 
   const bus = topicBus;
 
-  let server: WebSocketServer | null = null;
+  const server = new FoxgloveServer({
+    name: 'MODACS',
+    capabilities: ['publishing'],
+    supportedEncodings: ['json'],
+  });
+
+  // Topic → channel ID mapping (populated as topics are discovered)
+  const topicToChannel = new Map<string, number>();
+  const channelToTopic = new Map<number, string>();
+
+  // Active TopicBus subscriptions (lazy: only subscribed when Foxglove clients are listening)
+  const topicUnsubs = new Map<string, () => void>();
+
+  let wss: WebSocketServer | null = null;
   let attempt = 0;
   let pollTimer: ReturnType<typeof setInterval> | null = null;
 
-  // Topic → channel ID mapping
-  const topicToChannel = new Map<string, number>();
-  const channelToTopic = new Map<number, string>();
-  let nextChannelId = 1;
-
-  // Per-client subscriptions: WebSocket → Set<channelId>
-  const clientSubs = new Map<WebSocket, Set<number>>();
-  // Per-topic TopicBus unsubscribe functions
-  const topicUnsubs = new Map<string, () => void>();
-
-  function send(ws: WebSocket, obj: unknown): void {
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify(obj));
-    }
-  }
-
-  function broadcast(obj: unknown): void {
-    if (!server) return;
-    const msg = JSON.stringify(obj);
-    for (const client of server.clients) {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(msg);
-      }
-    }
-  }
-
-  function sendAdvertise(topic: string, channelId: number): void {
-    broadcast({
-      op: 'advertise',
-      channels: [{ id: channelId, topic, encoding: 'json', schemaName: 'JSON' }],
-    });
-  }
-
-  function subscribeToTopic(topic: string): void {
+  function ensureTopicSubscribed(topic: string): void {
     if (topicUnsubs.has(topic)) return;
+
+    const channelId = topicToChannel.get(topic);
+    if (channelId === undefined) return;
+
+    const encoder = new TextEncoder();
+
     const unsub = bus.subscribe(topic, (data: unknown) => {
-      const channelId = topicToChannel.get(topic);
-      if (channelId === undefined) return;
-      const encoded = Buffer.from(JSON.stringify(data)).toString('base64');
-      const timestamp = (BigInt(Date.now()) * 1_000_000n).toString();
-      const msg = JSON.stringify({ op: 'message', channelId, timestamp, data: encoded });
-      for (const [client, subs] of clientSubs) {
-        if (client.readyState === WebSocket.OPEN && subs.has(channelId)) {
-          client.send(msg);
-        }
-      }
+      server.sendMessage(
+        channelId,
+        BigInt(Date.now()) * 1_000_000n,
+        encoder.encode(JSON.stringify(data)),
+      );
     }, `foxglove-${topic}`);
+
     topicUnsubs.set(topic, unsub);
   }
 
-  function getOrCreateChannel(topic: string): void {
+  function ensureTopicUnsubscribed(topic: string): void {
+    const unsub = topicUnsubs.get(topic);
+    if (unsub) {
+      unsub();
+      topicUnsubs.delete(topic);
+    }
+  }
+
+  function ensureChannel(topic: string): void {
     if (topicToChannel.has(topic)) return;
-    const id = nextChannelId++;
-    topicToChannel.set(topic, id);
-    channelToTopic.set(id, topic);
-    sendAdvertise(topic, id);
-    subscribeToTopic(topic);
+
+    const chanId = server.addChannel({
+      topic,
+      encoding: 'json',
+      schemaName: 'JSON',
+      schema: JSON.stringify({ type: 'object' }),
+    });
+
+    topicToChannel.set(topic, chanId);
+    channelToTopic.set(chanId, topic);
+
+    logger.debug('Channel advertised', { topic, chanId });
   }
 
   function pollTopics(): void {
     for (const { topic } of bus.getTopics()) {
-      getOrCreateChannel(topic);
+      ensureChannel(topic);
     }
   }
 
-  function handleClientMessage(ws: WebSocket, raw: string): void {
-    let msg: { op?: string; subscriptions?: { channelId: number }[] };
-    try {
-      msg = JSON.parse(raw);
-    } catch {
-      return;
+  // Lazy TopicBus subscription: start forwarding when first Foxglove client subscribes
+  server.on('subscribe', (chanId: number) => {
+    const topic = channelToTopic.get(chanId);
+    if (topic) {
+      ensureTopicSubscribed(topic);
     }
-    if (msg.op === 'subscribe') {
-      const subs = clientSubs.get(ws) ?? new Set<number>();
-      for (const s of msg.subscriptions ?? []) {
-        subs.add(s.channelId);
-      }
-      clientSubs.set(ws, subs);
-    } else if (msg.op === 'unsubscribe') {
-      const subs = clientSubs.get(ws);
-      if (subs) {
-        for (const s of msg.subscriptions ?? []) {
-          subs.delete(s.channelId);
-        }
-      }
+  });
+
+  // Stop forwarding when last Foxglove client unsubscribes
+  server.on('unsubscribe', (chanId: number) => {
+    const topic = channelToTopic.get(chanId);
+    if (topic) {
+      ensureTopicUnsubscribed(topic);
     }
-  }
+  });
+
+  server.on('error', (err: Error) => {
+    logger.error('Foxglove server error', err);
+  });
 
   function tryStart(): void {
     const tryPort = port + attempt;
-    const wss = new WebSocketServer({ port: tryPort, host: '127.0.0.1' });
-
-    wss.on('listening', () => {
-      server = wss;
-      logger.info('Foxglove bridge listening', { port: tryPort });
-      pollTopics();
-      pollTimer = setInterval(pollTopics, POLL_INTERVAL_MS);
-
-      wss.on('connection', (ws: WebSocket) => {
-        if (wss.clients.size > MAX_CLIENTS) {
-          ws.close(1013, 'Too many connections');
-          return;
-        }
-        clientSubs.set(ws, new Set<number>());
-        logger.debug('Foxglove client connected');
-
-        send(ws, {
-          op: 'serverInfo',
-          name: 'MODACS',
-          capabilities: ['publishing'],
-          supportedEncodings: ['json'],
-        });
-
-        for (const [topic, id] of topicToChannel) {
-          send(ws, {
-            op: 'advertise',
-            channels: [{ id, topic, encoding: 'json', schemaName: 'JSON' }],
-          });
-        }
-
-        ws.on('message', (data: unknown) => handleClientMessage(ws, String(data)));
-        ws.on('close', () => {
-          clientSubs.delete(ws);
-          logger.debug('Foxglove client disconnected');
-        });
-      });
+    const ws = new WebSocketServer({
+      port: tryPort,
+      host: '127.0.0.1',
+      handleProtocols: (protocols) => server.handleProtocols(protocols),
     });
 
-    wss.on('error', (err: NodeJS.ErrnoException) => {
+    ws.on('listening', () => {
+      wss = ws;
+      logger.info('Foxglove bridge listening', { port: tryPort });
+
+      pollTopics();
+      pollTimer = setInterval(pollTopics, POLL_INTERVAL_MS);
+    });
+
+    ws.on('connection', (conn, req) => {
+      if (ws.clients.size > MAX_CLIENTS) {
+        conn.close(1013, 'Too many connections');
+        return;
+      }
+
+      const name = `${req.socket.remoteAddress}:${req.socket.remotePort}`;
+      server.handleConnection(conn as unknown as IWebSocket, name);
+      logger.debug('Foxglove client connected');
+    });
+
+    ws.on('error', (err: NodeJS.ErrnoException) => {
       if (err.code === 'EADDRINUSE' && attempt < MAX_RETRIES) {
-        wss.close();
+        ws.close();
         attempt++;
         tryStart();
       } else {
-        wss.close();
+        ws.close();
         logger.warn('Foxglove bridge disabled', { err: err.message });
       }
     });
@@ -183,7 +166,7 @@ function createBridge(topicBus?: TopicBus, port: number = DEFAULT_PORT): Foxglov
 
   return {
     broadcast(): void {
-      // No-op — Foxglove protocol uses topic-based messaging via TopicBus
+      // No-op — message delivery is handled by FoxgloveServer via TopicBus subscriptions.
     },
     close(): void {
       if (pollTimer) {
@@ -194,7 +177,7 @@ function createBridge(topicBus?: TopicBus, port: number = DEFAULT_PORT): Foxglov
         unsub();
       }
       topicUnsubs.clear();
-      server?.close();
+      wss?.close();
     },
   };
 }

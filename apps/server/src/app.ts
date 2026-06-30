@@ -34,7 +34,7 @@ async function createApp(): Promise<ServerComponents> {
   const hub = createHub();
   const topicBus = createTopicBus();
   const recorder = createRecorder('/tmp/modacs/recordings', topicBus);
-  const bridge = createBridge();
+  const bridge = createBridge(topicBus);
   const pluginsToKill: ManagedProcess[] = [];
 
   // Spawn base plugin process
