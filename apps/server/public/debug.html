@@ -84,6 +84,19 @@ pre {
 </div>
 
 <div class="panel">
+  <h2>📡 Foxglove Topics Monitor</h2>
+  <div class="row">
+    <button onclick="rapidFire()">🔥 Rapid Fire (10x)</button>
+    <button onclick="sendSingle()">📤 Send Single</button>
+    <span class="latency" id="foxglove-counter">Sent: 0 | Received: 0</span>
+  </div>
+  <div class="row" style="margin-top:8px;">
+    <label style="margin:0;font-size:0.8rem;">Topics: <span id="foxglove-topics">—</span></label>
+  </div>
+  <pre id="foxglove-log" style="max-height:200px;font-size:0.75rem;">Waiting for activity…</pre>
+</div>
+
+<div class="panel">
   <h2>Process Info</h2>
   <div class="grid">
     <div><label>MODACS_DEBUG</label><span id="info-debug">—</span></div>
@@ -183,6 +196,81 @@ async function checkDebugMode() {
     el.style.color = '#888';
   }
 }
+
+let foxgloveSent = 0;
+let foxgloveRecv = 0;
+
+function updateCounter() {
+  document.getElementById('foxglove-counter').textContent =
+    'Sent: ' + foxgloveSent + ' | Received: ' + foxgloveRecv;
+}
+
+async function sendSingle() {
+  const log = document.getElementById('foxglove-log');
+  const input = document.getElementById('echo-input');
+  const msg = input.value || 'foxglove-test-' + Date.now();
+  const start = performance.now();
+  try {
+    const res = await fetch('/rpc/echo', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({jsonrpc:'2.0',method:'echo',params:[msg],id:Date.now()})
+    });
+    const data = await res.json();
+    const ms = (performance.now() - start).toFixed(2);
+    foxgloveSent++;
+    foxgloveRecv++;
+    updateCounter();
+    log.textContent = '→ REQ [' + ms + 'ms] echo("' + msg + '")\n← RES [' + ms + 'ms] ' + JSON.stringify(data) + '\n' + log.textContent;
+  } catch (err) {
+    foxgloveSent++;
+    updateCounter();
+    log.textContent = '✗ ERROR: ' + err.message + '\n' + log.textContent;
+  }
+}
+
+async function rapidFire() {
+  const log = document.getElementById('foxglove-log');
+  log.textContent = '↻ Rapid fire started (10 rounds)…\n' + log.textContent;
+  for (let i = 1; i <= 10; i++) {
+    const msg = 'rapid-' + i;
+    const start = performance.now();
+    try {
+      const res = await fetch('/rpc/echo', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({jsonrpc:'2.0',method:'echo',params:[msg],id:Date.now()})
+      });
+      const data = await res.json();
+      const ms = (performance.now() - start).toFixed(2);
+      foxgloveSent++;
+      foxgloveRecv++;
+      updateCounter();
+      log.textContent = '[' + i + '/10] → echo("' + msg + '") ← ' + ms + 'ms ' + JSON.stringify(data.result) + '\n' + log.textContent;
+    } catch (err) {
+      foxgloveSent++;
+      updateCounter();
+      log.textContent = '[' + i + '/10] ✗ ' + err.message + '\n' + log.textContent;
+    }
+    if (i < 10) await new Promise(function(r) { setTimeout(r, 100); });
+  }
+  log.textContent = '✓ Rapid fire complete\n' + log.textContent;
+}
+
+async function refreshTopics() {
+  try {
+    const res = await fetch('/api/topics:list');
+    if (res.ok) {
+      const data = await res.json();
+      const names = Array.isArray(data) ? data.map(function(t) { return typeof t === 'string' ? t : t.topic; }) : [];
+      document.getElementById('foxglove-topics').textContent =
+        names.length ? names.slice(0, 5).join(', ') + (names.length > 5 ? ' …' : '') : 'none';
+    }
+  } catch(e) { /* ignore */ }
+}
+
+setInterval(refreshTopics, 5000);
+refreshTopics();
 
 checkStatus();
 checkDebugMode();
