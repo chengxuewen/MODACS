@@ -10,15 +10,16 @@
 
 import { createLogger } from '../../../packages/core/src/logger.ts';
 import { createHub } from '../../../packages/core/src/rpc/hub.ts';
-import { spawn } from '../../../packages/core/src/process-manager.ts';
+import { spawn, getProcessList } from '../../../packages/core/src/process-manager.ts';
 import { createRecorder } from '../../../packages/core/src/recorder.ts';
 import { createTopicBus } from '../../../packages/core/src/topic-bus.ts';
 import { createBridge } from '../../../packages/core/src/foxglove-bridge.ts';
 import { formatSocketPath } from '../../../packages/core/src/rpc/protocol.ts';
-import type { ManagedProcess } from '../../../packages/core/src/process-manager.ts';
+import type { ManagedProcess, ProcessInfo } from '../../../packages/core/src/process-manager.ts';
 import type { Hub } from '../../../packages/core/src/rpc/hub.ts';
 import type { Recorder } from '../../../packages/core/src/recorder.ts';
 import type { FoxgloveBridge } from '../../../packages/core/src/foxglove-bridge.ts';
+import type { TopicBus } from '../../../packages/core/src/topic-bus.ts';
 import { existsSync } from 'node:fs';
 
 const SOCKET_POLL_INTERVAL_MS = 100;
@@ -28,6 +29,8 @@ export interface ServerComponents {
   hub: Hub;
   recorder: Recorder;
   bridge: FoxgloveBridge;
+  topicBus: TopicBus;
+  processManager: { getProcessList: () => ProcessInfo[] };
   close: () => Promise<void>;
 }
 
@@ -96,7 +99,7 @@ async function createApp(): Promise<ServerComponents> {
     }
   }
 
-  return { hub, recorder, bridge, close };
+  return { hub, recorder, bridge, topicBus, processManager: { getProcessList }, close };
 }
 
 export { createApp };

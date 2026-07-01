@@ -270,7 +270,8 @@ async function refresh() {
   try {
     const res = await fetch('/api/topics:list');
     if (!res.ok) throw new Error('HTTP ' + res.status);
-    const topics = await res.json();
+    const json = await res.json();
+    const topics = json.data ?? [];
     render(topics);
     statusEl.style.color = '#888';
   } catch (err) {
