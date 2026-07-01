@@ -1,10 +1,10 @@
 # 项目状态
 
-**最后更新**: 2026-06-30
+**最后更新**: 2026-07-01
 
 ## 当前阶段
 
-脚手架阶段（Scaffold） — 构建基础设施和文档已就位，无应用源代码。
+开发阶段（Development） — TypeScript 平台 Slice 1 MVP + Debug 模块已完成，C++/ROS2 源代码待开始。
 
 ## 已完成
 
@@ -19,8 +19,8 @@
 - ✅ `.agents/rules/` 编码规则（common + cpp + typescript + zh 中文翻译）
 - ✅ `.agents/skills/` 技能定义（cpp-coding-standards, cpp-testing, qt-cpp-review, qt-qml, qt-qml-review, qt-qml-docs, qt-qml-profiler, qt-ui-design, qt-cpp-docs, openspec-*）
 - ✅ `.opencode/opencode.json` OpenCode 配置
-- ✅ `.opencode/AI_CONFIG.md` AI 配置指南（已从 MSRCS 适配为 MODACS 双栈）
-- ✅ `.opencode/MODEL_TIERS.md` 模型分层体系
+- ✅ `.opencode/agent-guide.md` AI 配置指南（已从 MSRCS 适配为 MODACS 双栈）
+- ✅ `.opencode/agent-model-tiers.md` 模型分层体系
 - ✅ `AGENTS.md` 项目知识库（296 行）
 - ✅ `SKILL.md` 技能注册表
 
@@ -51,17 +51,18 @@
 - ❌ `pixi.toml` — pixi 环境配置文件
 - ❌ Docker / docker-compose.yml
 - ❌ CI/CD（.github/workflows/ 或 GitLab CI）
-- ❌ Git commits（仓库已初始化但零提交）
+- ✅ Git commits（43 次提交，Conventional Commits 格式）
 
 ## 已就位（2026-06-30 更新）
 
-- ✅ TypeScript 平台代码已存在（10 个 .ts 文件：packages/core/, apps/server/, apps/base/）
+- ✅ TypeScript 平台代码已存在（43 个 .ts/.tsx 文件：packages/core/, apps/server/, apps/base/, apps/debug/）
+- ✅ Debug 模块已完成（apps/debug/，React SPA，7 页面 + stores + components + lib，已通过 QA）
 - ✅ TypeScript LSP 已配置（typescript-language-server v5.3.0）
 - ✅ C++ 工具链配置已创建（.clangd / .clang-format / .clang-tidy）
 - ✅ CodeGraph MCP 已配置并初始化（@colbymchenry/codegraph v1.1.4, 16文件/380节点/850边）
-- ✅ CodeGraph MCP 启动脚本（`.opencode/init-codegraph-mcp.sh`，自动探测 nvm/brew/直装）
+- ✅ CodeGraph MCP 启动脚本（`.opencode/init-mcp-codegraph.mjs`，跨平台 Node.js 脚本）
 - ✅ LSP 全套配置（7 个语言服务器：clangd, typescript-language-server, pyright, bash-language-server, rust-analyzer, html-language-server, remark-language-server）
-- ✅ LSP 安装检查脚本（`.opencode/init-lsp.sh`，208 行，幂等，覆盖全部 7 个 LSP）
+- ✅ LSP 启动包装脚本（`.opencode/init-lsp-wrap.mjs`，首次使用自动安装 LSP 再启动）
 - ✅ C++ 工具链配置文件（`.clangd` + `.clang-format` + `.clang-tidy`）
 - ✅ AI 工具使用优先级规则（AGENTS.md 中新增章节：codegraph > lsp > ast_grep > grep）
 - ✅ ADR-006 架构决策记录（AI 代码智能工具链配置）
@@ -74,4 +75,7 @@
 
 1. 创建 `pixi.toml` 使 `bootstrap.sh` 可运行
 2. 搭建 `src/` 目录结构和第一个 ROS2 包
-3. 启动 TypeScript 平台 Slice 1（见 docs/MODACS-Platform-Dev.md）
+3. ✅ TypeScript 平台 Slice 1 已完成 — Debug 模块 QA 通过
+4. 创建 `pixi.toml` 使 `bootstrap.sh` 可运行
+5. 搭建 `src/` 目录结构和第一个 ROS2 包
+6. Slice 2 开发（测试框架 + PostgreSQL + Drizzle）

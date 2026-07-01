@@ -1,6 +1,6 @@
 # 关键架构决策 (ADR)
 
-**最后更新**: 2026-06-30
+**最后更新**: 2026-07-01
 
 ## ADR-001: 双栈架构 — MSRCS + MODACS
 
@@ -32,14 +32,14 @@
 
 ---
 
-## ADR-003: AI_CONFIG.md 从 MSRCS 适配为 MODACS
+## ADR-003: agent-guide.md 从 MSRCS 适配为 MODACS
 
 **日期**: 2026-06-29
 **状态**: 已决策
 
-**背景**: `.opencode/AI_CONFIG.md` 和 `MODEL_TIERS.md` 原为 MSRCS 项目编写，包含大量 MSRCS 特定内容（ROS2 节点名、QExt/OpenCTK vendor、Change-Id/Gerrit、make.sh、opencode.sh、CodeGraph MCP）。
+**背景**: `.opencode/agent-guide.md` 和 `agent-model-tiers.md` 原为 MSRCS 项目编写，包含大量 MSRCS 特定内容（ROS2 节点名、QExt/OpenCTK vendor、Change-Id/Gerrit、make.sh、opencode.sh、CodeGraph MCP）。
 
-**决策**: 全面重写 AI_CONFIG.md（965→899 行）：
+**决策**: 全面重写 agent-guide.md（965→899 行）：
 - 标题和概述改为 MODACS 双栈描述
 - `make.sh` → `scripts/build.sh`（MODACS 实际构建入口）
 - 移除 CodeGraph MCP（未配置）
@@ -87,12 +87,12 @@
 **日期**: 2026-06-30
 **状态**: 已决策
 
-**背景**: 为 OpenCode AI 助手提供结构化代码视图，需要从 LSP、代码图谱、AST 搜索、代理编排四个层面配置工具链。经调研对比 CodeGraph、Serena、Gortex、GitNexus、ChunkHound 等方案后，评估当前项目状态（16 文件，无源代码，脚手架阶段）。
+**背景**: 为 OpenCode AI 助手提供结构化代码视图，需要从 LSP、代码图谱、AST 搜索、代理编排四个层面配置工具链。经调研对比 CodeGraph、Serena、Gortex、GitNexus、ChunkHound 等方案后，评估当前项目状态（43 文件，含 Debug 模块，开发阶段）。
 
 **决策**: 采用三层已就位方案，暂不引入额外工具：
 
-1. **LSP 层**：配置 7 个语言服务器（clangd/typescript-language-server/pyright/bash-language-server/rust-analyzer/html-language-server/remark-language-server），提供 `lsp_diagnostics`/`lsp_goto_definition`/`lsp_find_references`/`lsp_rename`/`lsp_symbols` 工具（来自 oh-my-opencode 插件）。`.opencode/init-lsp.sh` 提供幂等安装检查。
-2. **代码图谱层**：使用 `@colbymchenry/codegraph` v1.1.4 MCP（已配置并初始化，16 文件 / 380 节点 / 850 边）。单一工具 `codegraph_explore` 返回源码 + 调用链 + 影响范围。零外部依赖，SQLite 存储。
+1. **LSP 层**：配置 7 个语言服务器（clangd/typescript-language-server/pyright/bash-language-server/rust-analyzer/html-language-server/remark-language-server），提供 `lsp_diagnostics`/`lsp_goto_definition`/`lsp_find_references`/`lsp_rename`/`lsp_symbols` 工具（来自 oh-my-opencode 插件）。`.opencode/init-lsp-wrap.mjs` 提供首次自动安装 + 启动包装。
+2. **代码图谱层**：使用 `@colbymchenry/codegraph` v1.1.4 MCP（已配置并初始化，43+ 文件（含 apps/debug/），节点/边数已增长）。单一工具 `codegraph_explore` 返回源码 + 调用链 + 影响范围。零外部依赖，SQLite 存储。
 3. **AST 搜索层**：`ast_grep_search` + `ast_grep_replace`（来自 oh-my-opencode 插件，已就位）。
 4. **代理编排层**：oh-my-opencode 插件提供 explore/oracle/librarian/metis/momus 等专业代理（已就位）。
 
@@ -108,4 +108,4 @@
 - C++ 源代码到位时：确保 `compile_commands.json` 已生成（`scripts/gen-compile-db.sh`），clangd 自动生效
 - 代码量超过 ~500 文件时：评估 codegraph 是否仍够用，考虑切换到 Serena 或 Gortex
 
-**理由**: 当前项目处于脚手架阶段，四层能力已全部就位且零额外成本。避免过早引入复杂工具增加配置维护负担。等源代码规模增长后再按需升级。
+**理由**: 项目已进入开发阶段，四层能力已全部就位且零额外成本。避免过早引入复杂工具增加配置维护负担。等源代码规模增长后再按需升级。

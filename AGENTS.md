@@ -1,296 +1,126 @@
-# PROJECT KNOWLEDGE BASE
+# MODACS
 
-**Generated:** 2026-06-29
-**Version:** 0.1.1.1 (from `version.txt`)
-**Git:** No commits yet — scaffold stage
+Dual-stack robotics control platform. Two stacks coexist in one repo:
 
-## OVERVIEW
+- **MSRCS** — C++17/Qt5.15/ROS2 Jazzy remote control station (build infra ready, no source yet)
+- **MODACS** — TypeScript/Node.js multi-process web platform (Slice 1 MVP + Debug module complete, ~43 TS/TSX files)
 
-MODACS is a dual-stack robotics control platform: an existing C++17/Qt5.15/ROS2 Jazzy remote control station (MSRCS) with build infrastructure in place, plus a planned TypeScript/Node.js multi-process web platform (Hono + React + Drizzle + PostgreSQL). No application source code exists yet — only build scripts, AI agent rules, docs, and environment configs.
+## Commands
 
-## STRUCTURE
-
-```
-MODACS/
-├── .agents/           # AI rules + skills (first-class project artifacts)
-│   ├── rules/         # Coding standards, security, testing, workflows
-│   │   ├── common/    # Language-agnostic rules
-│   │   ├── cpp/       # C++17/Qt/ROS2 extensions
-│   │   ├── typescript/# TS/JS extensions
-│   │   └── zh/        # Chinese translations
-│   └── skills/        # 14 skills: 2 project (cpp-*), 7 Qt6 (cpp-review, cpp-docs, qml, qml-review, qml-docs, qml-profiler, ui-design), 5 OpenSpec
-├── .opencode/         # OpenCode AI IDE config + toolchain scripts (opencode.json, AI_CONFIG.md, MODEL_TIERS.md, init-lsp.sh, init-codegraph-mcp.sh)
-├── scripts/           # 11 shell scripts: build, env, pixi, pack, deploy
-├── docs/              # 11 architecture & design docs (platform, cluster, vision, act, link, naming, MES, etc.)
-├── changes/           # Changelog files (changes-0.1.1.txt)
-├── bootstrap.sh       # One-shot env setup → calls scripts/pixi-init.sh
-├── turbo.json         # Turborepo config (planned JS monorepo tasks)
-├── version.txt        # Semantic version (currently 0.1.1.1)
-└── SKILL.md           # AI skill registry (superpowers + project skills)
-```
-
-## WHERE TO LOOK
-
-| Task | Location | Notes |
-|------|----------|-------|
-| Env setup (first time) | `bootstrap.sh` | Installs pixi 0.67.2 + deps |
-| Build C++/ROS2 | `scripts/build.sh` | colcon + Ninja, default pkg `ms_rcs` |
-| Build with debug | `scripts/build.sh --debug` | CMAKE_BUILD_TYPE=Debug |
-| Selective build | `scripts/build.sh --packages select <pkg>` | |
-| Package for deploy | `scripts/pack.sh` | pixi-pack + npm tar |
-| Runtime install | `scripts/install.sh` | Extracts packed env |
-| Enter runtime shell | `source scripts/env-source.sh` | Loads ROS2 + pixi env |
-| Fast-DDS + SHM | `source scripts/env-fastdds.sh` | RMW=rmw_fastrtps_cpp |
-| Generate compile_commands.json | `scripts/gen-compile-db.sh` | For clangd LSP |
-| TS platform spec | `docs/MODACS-AI-Dev.md` | AI coding rules, tech stack, code templates (776 lines) |
-| Project overview | `docs/MODACS-Overview.md` | Top-level: vision, architecture, roadmap, decisions (469 lines) |
-| Platform architecture | `docs/MODACS-Platform.md` | Odoo-style modular platform: multi-process, plugin lifecycle, UI isolation (1740 lines) |
-| Development guide | `docs/MODACS-Platform-Dev.md` | Vertical slice implementation with TypeScript code templates (3848 lines) |
-| Cluster architecture | `docs/MODACS-Cluster.md` | Multi-node cluster, app version management (698 lines) |
-| Open-source reference | `docs/MODACS-Platform-Ref.md` | CasaOS/Runtipi/1Panel/NocoBase/Odoo/n8n comparison (1282 lines) |
-| Vision product | `docs/MODACS-Vision.md` | Video monitoring + AI analysis platform (Rust/dora-rs, 536 lines) |
-| Act product | `docs/MODACS-Act.md` | Execution layer: soft PLC, CNC, DCS (Rust/dora-rs, 88 lines) |
-| Link middleware | `docs/MODACS-Link.md` | Middleware abstraction for Podman-isolated modules (Rust/dora-rs, 558 lines) |
-| Naming whitepaper | `docs/MODACS-Naming.md` | Brand architecture, trademark analysis, product family naming (366 lines) |
-| MES development plan | `docs/MES-Development-Plan.md` | First MES app: tech selection, architecture, 28-week roadmap (499 lines) |
-| AI dev workflow | `.opencode/AI_CONFIG.md` | 7-stage pipeline, agent roles |
-| Model tiers | `.opencode/MODEL_TIERS.md` | premium-max/premium/fast/vision/lite |
-| Skills registry | `SKILL.md` | Superpowers + project skills mapping |
-| Coding rules | `.agents/rules/` | common/ + cpp/ + typescript/ |
-| C++ testing ref | `.agents/skills/cpp-testing.md` | GoogleTest patterns, TDD, sanitizers |
-| Qt C++ review | `.agents/skills/qt-cpp-review/` | 60+ lint rules + 6 parallel analysis agents (Qt6) |
-| Qt QML review | `.agents/skills/qt-qml-review/` | 47+ lint rules + 6 parallel analysis agents (Qt6) |
-| Qt QML best practices | `.agents/skills/qt-qml/` | QML coding patterns and conventions |
-| Qt QML profiler | `.agents/skills/qt-qml-profiler/` | QML performance profiling and hotspot analysis |
-| Qt UI design | `.agents/skills/qt-ui-design/` | UI/UX design and audit for Qt/QML |
-| Qt C++ docs gen | `.agents/skills/qt-cpp-docs/` | Markdown reference docs from C++ source |
-| Qt QML docs gen | `.agents/skills/qt-qml-docs/` | Markdown reference docs from QML source |
-| OpenSpec workflow | `.agents/skills/openspec-*/` | 5 skills: propose, apply-change, archive-change, explore, sync-specs |
-
-## CONVENTIONS
-
-### Naming (from MODACS-AI-Dev.md)
-- Files: `kebab-case` (e.g., `work-order.ts`)
-- Classes: `PascalCase`
-- Functions/variables: `camelCase`
-- Constants: `UPPER_SNAKE_CASE`
-- DB schema: `{module}_{table}` (e.g., `mes_work_orders`)
-- API paths: `/api/{collection}:{action}` (NOT REST style)
-  - ✅ `/api/work-orders:list` `/api/work-orders:create` `/api/work-orders:get?id=123`
-
-### C++ (from .agents/rules/cpp/)
-- Standard: C++17 (project config says C++17; rules also reference C++20/23 features)
-- Qt: 5.15 (skills target Qt6 but project uses 5.15)
-- ROS2: Jazzy
-- Build: colcon + Ninja, `--merge-install`, `BUILD_TESTING=OFF`
-- Memory: RAII everywhere — no raw `new`/`delete`, use `std::unique_ptr`/`std::make_unique`
-- Format: clang-format (no config file yet — create one)
-- LSP: clangd (compile_commands.json generated by `scripts/gen-compile-db.sh`)
-
-### TypeScript (from .agents/rules/typescript/ + MODACS-AI-Dev.md)
-- Runtime: Node.js 24 LTS (❌ no Bun proprietary APIs)
-- Package: pnpm workspaces (❌ no npm/yarn/bun install)
-- Web: Hono ^4 (❌ no Express/Fastify/Koa)
-- ORM: Drizzle ^0.36 (❌ no Prisma/Sequelize/TypeORM)
-- DB: PostgreSQL 16+ (❌ no SQLite/MySQL)
-- Frontend: React 19 + shadcn/ui + Tailwind CSS v4
-- State: Zustand ^5 (❌ no Redux/Jotai)
-- Data: TanStack Query ^5 (❌ no SWR)
-- Build: esbuild (❌ no webpack/rollup)
-- Test: vitest + Playwright (❌ no Jest)
-- Validation: Zod ^3
-- UDS transport: undici ^7 (❌ no node-fetch/axios)
-
-### Architecture Constraints (MODACS-AI-Dev.md §3)
-- **Multi-process**: Base process (Node.js) manages plugin subprocesses via fork
-- **Communication**: JSON-RPC 2.0 over UDS (Unix Domain Sockets) — JSON only
-- **Allowed patterns**: req/rep (HTTP POST over UDS), pub/sub (fan-out), streaming (SSE + Zenoh v2)
-- **Prohibited**: ZMQ, NNG, gRPC streams, Redis, cross-node transparent RPC
-- **Plugins**: Independent child processes, no direct DB access (RPC to base process)
-- **UI isolation**: 3 layers — UIAdapter interface → platform composite components → Field Interface registry
-- **Module code**: Only import from `@modacs/ui` — never `shadcn/ui` or `@radix-ui/*` directly
-
-### File Organization
-- 200-400 lines typical, 800 max
-- Functions <50 lines
-- Nesting max 4 levels (use early returns)
-- Many small files > few large files
-- Immutability: always create new objects, never mutate (CRITICAL)
-
-## ANTI-PATTERNS (THIS PROJECT)
-
-### Explicitly Forbidden (MODACS-AI-Dev.md §8)
-- ❌ Bun proprietary APIs (`Bun.serve`, `Bun.spawn`, `http://unix:` pattern)
-- ❌ SQLite (use PostgreSQL)
-- ❌ Child processes connecting DB directly (use UDS RPC to base)
-- ❌ Module code importing `shadcn/ui` or `@radix-ui/*` directly
-- ❌ Redis (fan-out is sufficient)
-- ❌ ZMQ / NNG / gRPC
-- ❌ Message format switching (JSON only — no MessagePack/Arrow/Protobuf)
-- ❌ Cross-node transparent RPC (cluster uses HTTP API)
-- ❌ REST-style API paths (use `/api/{collection}:{action}`)
-- ❌ `console.log` for logging (use unified logger — stdout conflicts in subprocesses)
-- ❌ Forgetting socket file cleanup (unlink old socket on startup)
-- ❌ Writing tests in Slice 1 / Spike phase (interfaces unstable)
-- ❌ `import { fetch } from 'undici'` (Node.js built-in fetch can't do UDS — use `new Client`)
-- ❌ Plugin code connecting PostgreSQL directly (must go through RPC Hub → base)
-
-### C++ Anti-Patterns (.agents/rules/cpp/ + skills)
-- ❌ Raw `new`/`delete` — use smart pointers
-- ❌ C-style arrays (`int buf[256]`) — use `std::array`/`std::vector`
-- ❌ C strings (`strcpy`, `strcat`, `sprintf`) — use `std::string`
-- ❌ `malloc`/`free` — use C++ allocation
-- ❌ `reinterpret_cast` unless absolutely necessary
-- ❌ `std::auto_ptr` (removed in C++11)
-- ❌ `return std::move(result)` — blocks RVO/NRVO
-- ❌ Uninitialized variables
-- ❌ Signed integer overflow (UB)
-
-### Qt Anti-Patterns (from review checklists)
-- ❌ `Q_FOREACH` — use range-based for (`QT_NO_FOREACH`)
-- ❌ Java-style iterators — use STL iterators
-- ❌ `QScopedPointer` — use `std::unique_ptr`
-- ❌ `QSharedPointer`/`QWeakPointer` — use `std::shared_ptr`/`std::weak_ptr` (2× atomic ops)
-- ❌ `QPair` — use `std::pair`
-- ❌ `std::optional::value()` — use `*opt` or `opt->foo`
-- ❌ Side effects inside `Q_ASSERT`
-- ❌ Mutating `QAbstractItemModel` from background threads
-- ❌ Emitting signals from worker threads with `DirectConnection` to main thread
-- ❌ Constructing `QRegularExpression` inside loops
-- ❌ `QMap` for small fixed-size constant data
-
-### QML Anti-Patterns (from review checklists)
-- ❌ `Qt.include()` (deprecated Qt 5.14)
-- ❌ Versioned imports (Qt 5 style) — blocks qmlsc
-- ❌ `property var` instead of typed properties — blocks qmlsc
-- ❌ Imperative `property = value` (destroys declarative binding)
-- ❌ `anchors` + `Layout` on same item — conflict
-- ❌ Bare `width`/`height` inside Layout child — silently breaks layout
-- ❌ Loader with both `source` and `sourceComponent` — undefined behavior
-- ❌ `connect()` in `Component.onCompleted` for delegates — connections outlive delegate
-- ❌ Image without `sourceSize` — full-res decoded to GPU memory
-- ❌ `color: "transparent"` on Rectangle — unnecessary scene graph node
-- ❌ `opacity: 0` without animation — still renders, keeps focus
-- ❌ `Text.RichText` unless needed — expensive HTML/CSS parser
-- ❌ `var` instead of `let`/`const` — function scope bugs
-- ❌ Loose equality (`==`/`!=`) — type coercion
-- ❌ `rootContext()->setContextProperty()` — expensive, global, invisible to tooling
-- ❌ `onFoo:` handler syntax in Connections (deprecated)
-- ❌ Emitting C++ signals from QML
-
-### TypeScript Anti-Patterns
-- ❌ `any` in application code — use `unknown` + narrow
-- ❌ Object mutation (`user.name = name`) — use spread `{...user, name}`
-- ❌ Exported functions without explicit parameter/return types
-- ❌ `React.FC` (unless specific reason)
-- ❌ `@ts-ignore` / `@ts-expect-error` / `as any`
-- ❌ Empty catch blocks `catch(e) {}`
-- ❌ `console.log` in production — use proper logger
-
-## AI 工具使用优先级
-
-> AI 助手在处理代码相关任务时，应按以下优先级选择工具。
-
-| 任务场景 | 首选工具 | 回退方案 |
-|----------|---------|----------|
-| 代码理解/导航/架构分析 | `codegraph_explore` | grep + read |
-| 符号定义查找 | `lsp_goto_definition` | `codegraph_explore` |
-| 符号引用查找 | `lsp_find_references` | `codegraph_explore` |
-| 符号重命名 | `lsp_rename` | 手动 sed/edit |
-| 结构化代码搜索 | `ast_grep_search` | grep |
-| 结构化代码替换 | `ast_grep_replace` | sed |
-| 代码诊断/类型检查 | `lsp_diagnostics` | build 命令 |
-| 文档大纲/符号列表 | `lsp_symbols` | grep function/class |
-
-**规则**：
-- 调用 `codegraph_explore` 前无需先 grep 或 read — 一次调用即可返回源码 + 调用链 + 影响范围
-- 仅当 codegraph 报告未索引（无 `.codegraph/` 目录）或返回结果不足时，才回退到 grep/read
-- 编辑文件后，若 codegraph 返回过期警告（⚠️ banner），对警告中列出的文件使用 read 确认最新内容
-- `lsp_*` 工具仅对已配置 LSP 的语言生效（当前：C++/clangd；TypeScript 待添加）
-- 对 codegraph 不索引的内容（配置文件、文档、非代码文件），直接使用 read/grep
-
-## UNIQUE STYLES
-
-- **`.agents/` as first-class artifacts**: AI rules, skills, and memory are versioned project files, not external configs. Rules define standards; skills provide deep reference material. Rules reference skills via `See skill: <name>`.
-- **Dual-stack infrastructure**: Build scripts target C++/ROS2 (colcon/pixi/Ninja); `turbo.json` targets JS monorepo. Both coexist in root.
-- **pixi for everything**: Single conda-based package manager manages C++ compiler, ROS2 deps, AND Node.js runtime. Installed from Gitee mirror (`gitee.com/chengxuewen-github/pixi`).
-- **pixi-pack deployment**: Entire pixi environment packed into standalone shell script for offline deployment.
-- **Infrastructure-first**: All scaffolding (scripts, AI rules, docs) committed before any source code. `src/` directory expected but not present.
-- **Custom compile_commands.json**: `scripts/gen-compile-db.sh` merges colcon build fragments instead of using CMake's native generation.
-- **3rdparty preservation**: `build.sh` backs up/restores `3rdparty`, `openctk_vendor`, `qext_vendor` directories during clean builds.
-- **`version.txt`**: Plain-text version file in root (not in CMakeLists.txt or package.xml).
-- **`changes/` directory**: Changelog as separate files per version (not `CHANGELOG.md`).
-
-## COMMANDS
-
-### Environment Setup (one-time)
+### TypeScript (active development)
 ```bash
-bash bootstrap.sh                        # Install pixi 0.67.2 + all deps + pnpm install
+pnpm dev                          # Start backend (tsx apps/server/src/main.ts, port 3001)
+MODACS_DEBUG=1 pnpm dev           # Backend + Foxglove WS bridge (port 8765)
+pnpm build                        # esbuild → dist/
+pnpm typecheck                    # tsc --noEmit for both root and apps/debug (MUST pass before commit)
 ```
 
-### C++/ROS2 Build
+Access debug pages at `http://127.0.0.1:3001/debug.html` — use `127.0.0.1`, NOT `localhost` (Clash proxy on port 7897 intercepts localhost).
+
+### C++/ROS2 (build infra only, no source yet)
 ```bash
-bash scripts/build.sh                    # Full build (colcon + Ninja, RelWithDebInfo)
-bash scripts/build.sh --debug            # Debug build
-bash scripts/build.sh --packages select <pkg>  # Selective package build
-bash scripts/build.sh --clean-cache true       # Clean CMake cache + rebuild
-bash scripts/build.sh --preserve-3rdparty true # Preserve 3rdparty dirs during clean
+bash bootstrap.sh                           # One-time: install pixi + deps
+bash scripts/build.sh                       # colcon + Ninja build
+bash scripts/build.sh --debug               # Debug build
+bash scripts/build.sh --packages select <pkg>  # Selective build
+source scripts/env-source.sh                # Load ROS2 + pixi env
+source scripts/env-fastdds.sh               # Fast-DDS + shared memory
 ```
 
-### Runtime Environment
-```bash
-source scripts/env-source.sh             # Load ROS2 + pixi env into current shell
-source scripts/env-fastdds.sh            # Enable Fast-DDS + SHM shared memory
-bash scripts/env-shell.sh                # Start shell with env loaded
+## Architecture (TypeScript platform)
+
+Multi-process: base process (Node.js/Hono) manages plugin child processes via `child_process.fork`.
+
+```
+apps/server/src/main.ts   → Hono HTTP server (port 3001), routes, static files
+apps/server/src/app.ts    → createApp(): assembles hub, recorder, bridge, topicBus, logger
+apps/base/src/index.ts    → Echo RPC plugin (sample plugin child process)
+packages/core/src/        → Shared core library:
+  rpc/protocol.ts         → JSON-RPC 2.0 types
+  rpc/transport.ts        → UDS transport via undici Client (NOT fetch — can't do UDS)
+  rpc/hub.ts              → RPC hub, plugin routing, TopicBus hooks
+  topic-bus.ts            → Pub/sub engine with retainLast + wildcard matching
+  topic-types.ts          → Topic naming: /module/category/name (slash style)
+  logger.ts               → Structured JSON logger, publishes to /log/{name} via TopicBus
+  foxglove-bridge.ts      → Official @foxglove/ws-protocol, foxglove.Log schema
+  recorder.ts             → MCAP multi-topic recorder
+  process-manager.ts      → Child process spawn with exponential backoff restart
 ```
 
-### Deploy / Package
-```bash
-bash scripts/pack.sh --install-dir <dir> # Pack env for deployment
-bash scripts/install.sh                  # Install from packed archive
-bash scripts/archive.sh                  # Archive (excludes env/log/data/node_modules)
+### Debug Module (apps/debug/)
+
+React SPA served by the backend at `/debug/`. Vite-built, lazy-loaded pages.
+
+```
+apps/debug/src/
+  App.tsx                  → Router with /debug basepath, React.lazy pages
+  main.tsx                 → Vite entry, QueryClient, BrowserRouter
+  pages/                   → 7 pages: Overview, DataFlow, LogViewer, McapBridge,
+                             RpcConsole, TopicGraph, TopicMonitor
+  components/              → Layout, MessagePublisher, TopicMonitor, LogLine,
+                             JsonView, RawMessageInspector, McapControl,
+                             BridgeStatus, ProcessMonitor + ui/ (card, label, checkbox)
+  stores/                  → Zustand stores: rpc-store, topic-store,
+                             publish-store, log-store
+  lib/                     → api-client (apiGet helper), graph-builder,
+                             panel-registry, rate-tracker
+  types/api.ts             → Shared API types
+  vite.config.ts           → Vite config with manualChunks
 ```
 
-### Planned TypeScript Platform (from MODACS-AI-Dev.md)
-```bash
-docker compose up -d db                  # Start PostgreSQL
-corepack enable && pnpm install
-pnpm dev                                 # Backend tsx watch
-pnpm --filter @modacs/ui dev             # Frontend Vite
-MODACS_DEBUG=1 pnpm dev                  # Backend + Foxglove Bridge
-pnpm db:migrate                          # Drizzle Kit migrations
-pnpm db:studio                           # Drizzle Studio
-pnpm build                               # esbuild → dist/
-```
 
-### Testing (C++ — GoogleTest + CTest)
-```bash
-cmake --build build && ctest --test-dir build --output-on-failure
-# Coverage:
-cmake -DCMAKE_CXX_FLAGS="--coverage" -DCMAKE_EXE_LINKER_FLAGS="--coverage" ..
-cmake --build . && ctest && lcov --capture --directory . --output-file coverage.info
-# Sanitizers (ASan + UBSan):
-cmake -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" ..
-```
+**Communication**: JSON-RPC 2.0 over Unix Domain Sockets. JSON only (no MessagePack/Protobuf).
+**TopicBus**: Pub/sub with trailing `*` wildcard (e.g., `/log/*`). Retained messages replay on subscribe.
+**API paths**: `/api/{collection}:{action}` — NOT REST. Example: `/api/topics:list`, `/rpc/echo`.
 
-### Testing (TypeScript — planned)
-```bash
-pnpm test:unit                           # vitest (pure logic)
-pnpm test:integration                    # vitest (API + RPC + DB)
-pnpm test:e2e                            # Playwright end-to-end
-```
+## Critical Constraints
 
-## NOTES
+These are project-specific and agents WILL get them wrong without this list:
 
-- **No git commits**: Repo is initialized but has zero commits. All files are untracked.
-- **No `src/` directory**: Build scripts expect `ROOT_DIR/src/` with ROS2 packages but it doesn't exist yet.
-- **No `pixi.toml`**: Referenced by scripts but not present — likely needs creation.
-- **No `make.sh`**: `AI_CONFIG.md` references `make.sh` as unified build entry but only `scripts/build.sh` exists.
-- **No CI/CD**: Zero `.github/workflows/`, no GitLab CI, no Jenkinsfile.
-- **No Docker**: No Dockerfile or docker-compose.yml (MODACS-AI-Dev.md plans `docker compose up db`).
-- **No `.clang-tidy` / `.clang-format`**: Despite C++ rules mandating them.
-- **`BUILD_TESTING=OFF`**: Tests explicitly disabled in `build.sh` (line 257).
-- **Hardcoded parallelism**: `--parallel-workers 6` in build.sh (not dynamic from nproc).
-- **Slice 1 = Spike**: Per MODACS-AI-Dev.md, no tests during Slice 1 (interfaces unstable). Demo Checklist must still be automated.
-- **Gitee mirror**: pixi installed from `https://gitee.com/chengxuewen-github/pixi` (China-hosted mirror, not upstream GitHub).
-- **Two project identities**: MSRCS (C++/Qt/ROS2, build infra exists) vs MODACS (TS/React/Hono, spec only). `.agents/` covers both.
+1. **No Bun APIs** — `Bun.serve`, `Bun.spawn`, `http://unix:` all forbidden. Use Node.js built-ins.
+2. **No `console.log`** in app code — conflicts with subprocess stdout. Use `packages/core/src/logger.ts`. The logger itself uses `console.log` internally (exception).
+3. **UDS transport requires `new Client` from undici** — Node.js built-in `fetch` cannot do Unix Domain Sockets.
+4. **Socket cleanup** — Always `unlink` old UDS socket files on startup. Socket dir: `/tmp/modacs` (chmod 0o700).
+5. **No tests in Slice 1** — Interfaces are unstable (per `docs/MODACS-Platform-Dev.md` §8.2). TDD rules in `.agents/rules/` do NOT apply until Slice 2.
+6. **No Redis/ZMQ/NNG/gRPC** — Fan-out via TopicBus is sufficient. Cluster uses HTTP API, not transparent RPC.
+7. **No direct DB access from plugins** — Plugins communicate via RPC to base process only.
+8. **Immutability is CRITICAL** — Always spread, never mutate. `{...obj, field: value}`, not `obj.field = value`.
+9. **Tech stack is locked** — Hono (not Express), Drizzle (not Prisma), Zustand (not Redux), TanStack Query (not SWR), esbuild (not webpack), vitest+Playwright (not Jest). See `docs/MODACS-AI-Dev.md` §8 for full forbidden list.
+
+## What Exists vs What's Planned
+
+| Exists | Missing |
+|--------|---------|
+| ~43 TS/TSX source files (Slice 1 + Debug module) | `src/` C++/ROS2 source |
+| `pixi.toml` — still not created | Docker / docker-compose.yml |
+| `.clangd`, `.clang-format`, `.clang-tidy` | CI/CD pipelines |
+| 2 HTML debug pages + React Debug SPA (7 pages) | PostgreSQL + Drizzle setup |
+| pnpm workspace (root + apps/ + packages/) | Test framework config |
+| 43 git commits | `pixi.toml` file (referenced by scripts) |
+
+`BUILD_TESTING=OFF` in `build.sh` is intentional (no C++ test code yet).
+
+## Key Docs
+
+| Doc | What's in it |
+|-----|-------------|
+| `docs/MODACS-AI-Dev.md` | Tech stack rules, forbidden list §8, code templates |
+| `docs/MODACS-Platform-Dev.md` | Slice definitions, vertical slice implementation guide |
+| `docs/MODACS-Platform.md` | Odoo-style modular platform architecture (1740 lines) |
+|| `.opencode/agent-guide.md` | 7-stage AI dev pipeline, agent roles, model tiers |
+
+## AI Tool Priority
+
+Code navigation: `codegraph_explore` → `lsp_*` → `ast_grep_search` → `grep`
+Symbol lookup: `lsp_goto_definition` / `lsp_find_references` → `codegraph_explore`
+
+During **planning** (this is a Prometheus/planner repo): do NOT call `codegraph_explore` directly — it returns full source. Delegate to explore/librarian agents who consume it in their sandbox.
+
+## Conventions
+
+- Files: `kebab-case` (`work-order.ts`). Classes: `PascalCase`. Functions: `camelCase`. Constants: `UPPER_SNAKE`.
+- DB schema: `{module}_{table}` (e.g., `mes_work_orders`).
+- Version in `version.txt` (not CMakeLists.txt or package.json).
+- Changelog in `changes/` directory (per-version files, not CHANGELOG.md).
+- Git: Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`). No AI auto-commit.
+- pixi installed from Gitee mirror (`gitee.com/chengxuewen-github/pixi`) — China network.

@@ -1,6 +1,6 @@
 # 踩坑记录
 
-**最后更新**: 2026-06-30
+**最后更新**: 2026-07-01
 
 ## 文档同步
 
@@ -34,9 +34,9 @@
 
 ### make.sh 不存在
 
-**问题**: AI_CONFIG.md 原引用 `make.sh` 作为统一构建入口，但 MODACS 仓库中不存在此文件，只有 `scripts/build.sh`。
+**问题**: agent-guide.md 原引用 `make.sh` 作为统一构建入口，但 MODACS 仓库中不存在此文件，只有 `scripts/build.sh`。
 
-**解决**: 重写 AI_CONFIG.md 时将所有 `make.sh` 引用改为 `scripts/build.sh`。
+**解决**: 重写 agent-guide.md 时将所有 `make.sh` 引用改为 `scripts/build.sh`。
 
 **教训**: 从其他项目移植配置文件时，必须验证所有文件路径引用。
 
@@ -70,23 +70,23 @@
 
 ### CodeGraph MCP 未配置
 
-**问题**: 原 AI_CONFIG.md 引用 CodeGraph MCP（语义代码索引），但 MODACS 未配置此工具。
+**问题**: 原 agent-guide.md 引用 CodeGraph MCP（语义代码索引），但 MODACS 未配置此工具。
 
-**解决**: 从 AI_CONFIG.md 中移除所有 CodeGraph 相关内容（§5.8 整节删除 + §5.6 MCP 表 + §12 配置速查 + §13 故障排除 + §14 快速上手）。
+**解决**: ✅ 已解决 — CodeGraph MCP 后来重新配置。现在通过 `.opencode/init-mcp-codegraph.mjs`（跨平台 Node.js 脚本）启动，替代了旧的 bash 脚本。
 
 ---
 
 ### opencode.sh 不存在
 
-**问题**: 原 AI_CONFIG.md §13.6 引用 `opencode.sh` 启动脚本，但 MODACS 中不存在。
+**问题**: 原 agent-guide.md §13.6 引用 `opencode.sh` 启动脚本，但 MODACS 中不存在。
 
 **解决**: 删除 §13.6 整节。
 
 ---
 
-### MODEL_TIERS.md 状态标注错误
+### agent-model-tiers.md 状态标注错误
 
-**问题**: AI_CONFIG.md §12 原标注 MODEL_TIERS.md 为"未创建，参考本文档"，但文件实际已存在（256 行）。
+**问题**: agent-guide.md §12 原标注 agent-model-tiers.md 为"未创建，参考本文档"，但文件实际已存在（256 行）。
 
 **解决**: 更新标注为"已创建"。
 
@@ -96,7 +96,7 @@
 
 ### 仓库零提交
 
-**注意**: 仓库已 `git init` 但零提交，所有文件未跟踪。首次提交时需注意 `.gitignore` 配置（排除 `env/`, `log/`, `data/`, `node_modules/` 等）。
+**已解决**: ✅ 仓库现有 43 次提交（Conventional Commits 格式）。apps/debug/ 仍为未跟踪状态。
 
 ### 缺少 .clang-tidy / .clang-format
 
@@ -108,7 +108,7 @@
 
 ### TypeScript LSP 未配置
 
-**问题**: TypeScript 源代码已存在（10 个 .ts 文件），但 `opencode.json` 中未配置 TypeScript LSP，`typescript-language-server` 未安装。
+**问题**: TypeScript 源代码已存在（43 个 .ts/.tsx 文件），但 `opencode.json` 中未配置 TypeScript LSP，`typescript-language-server` 未安装。
 
 **解决**: ✅ 已解决（2026-06-30）— 全局安装 `typescript-language-server` v5.3.0 + `typescript`，在 `opencode.json` 的 `lsp` 中添加 `typescript-language-server` 条目（extensions: ts/tsx/js/jsx）。
 
@@ -118,4 +118,22 @@
 
 **问题**: `opencode.json` 中 codegraph MCP 的 command 使用 `&&` 链连接 nvm source 和 npx 执行。当 nvm 未安装时（`[ -s "$NVM_DIR/nvm.sh" ]` 返回 false），`&&` 链短路，`exec npx` 永远不执行，MCP 进程启动后立即退出。
 
-**解决**: ✅ 已解决（2026-06-30）— 创建 `.opencode/init-codegraph-mcp.sh` 包装脚本，自动探测 nvm/brew/直装三种 Node.js 环境。`opencode.json` command 改为 `["bash", ".opencode/init-codegraph-mcp.sh"]`。
+**解决**: ✅ 已解决（2026-07-01）— 创建 `.opencode/init-mcp-codegraph.mjs`（跨平台 Node.js 脚本，替代旧的 bash 版 init-codegraph-mcp.sh）。
+
+---
+
+### Playwright MCP 错误 32000（chromium 预检查崩溃）
+
+**问题**: `init-mcp-playwright.mjs` 中 `npx playwright install --dry-run chromium` 在 pnpm strict node_modules 下失败 — `playwright` CLI 未提升到根 `.bin/`（`playwright-mcp` 二进制存在但 `playwright` CLI 缺失）。execSync 抛出未捕获异常，脚本在 MCP 服务器启动前退出 → OpenCode 错误 32000。
+
+**解决**: ✅ 已解决（2026-07-01）— 移除 chromium 预检查/安装步骤。`--isolated` 模式在工具调用时按需启动浏览器，无需服务器启动时预装。
+
+---
+
+### pnpm strict node_modules 不提升 CLI
+
+**问题**: pnpm 的 strict node_modules 策略不将依赖包的 CLI 提升到根 `.bin/`。`@playwright/mcp` 的 `playwright-mcp` 二进制存在，但 `playwright` CLI（来自 `playwright` 包）不在根 `.bin/`。
+
+**影响**: 任何通过 `npx <package-name>` 调用依赖包 CLI的脚本都可能失败。
+
+**解决**: 使用 `npx --package=<pkg> <cmd>` 或直接引用 `node_modules/<pkg>/bin/<cmd>` 路径。

@@ -1,6 +1,6 @@
 # 编码约定
 
-**最后更新**: 2026-06-30
+**最后更新**: 2026-07-01
 
 ## 命名规范
 
@@ -77,7 +77,7 @@
 
 - 分支命名：`feat/`, `fix/`, `chore/` 前缀
 - 提交信息：Conventional Commits 格式（`feat:` `fix:` `chore:` `docs:`）
-- 仓库当前零提交，所有文件未跟踪
+- 仓库现有 43 次提交（Conventional Commits 格式），apps/debug/ 仍为未跟踪状态
 
 ## AI 工具使用优先级
 
