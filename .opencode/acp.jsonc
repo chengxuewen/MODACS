@@ -1,5 +1,5 @@
 {
-  // ACP (Active Context Pruning) configuration for MSRCS
+  // ACP (Active Context Pruning) configuration for MODACS
   // Migrated from keakon-DCP (2026-06-16) to ranxianglei/opencode-acp@^1.1
   // Reference: .omo/plans/dcp-to-acp-migration.md, ADR-020, ADR-023
   "enabled": true,

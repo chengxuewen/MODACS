@@ -40,8 +40,8 @@
     ".agents/rules/zh/performance.md",
     ".agents/rules/zh/security.md",
     ".agents/rules/zh/testing.md",
-    "AI_CONFIG.md",
-    "MODEL_TIERS.md"
+    "agent-guide.md",
+    "agent-model-tiers.md"
   ],
   "mcp": {
     "qt-docs": {
@@ -52,36 +52,41 @@
     "codegraph": {
       "type": "local",
       "enabled": true,
-      "command": ["bash", ".opencode/init-codegraph-mcp.sh"]
+      "command": ["node", ".opencode/init-mcp-codegraph.mjs"]
+    },
+    "playwright": {
+      "type": "local",
+      "enabled": true,
+      "command": ["node", ".opencode/init-mcp-playwright.mjs"]
     }
   },
   "lsp": {
     "clangd": {
-      "command": ["clangd", "--background-index"],
+      "command": ["node", ".opencode/init-lsp-wrap.mjs", "clangd", "--background-index"],
       "extensions": ["cpp", "h", "hpp", "cc", "cxx"]
     },
     "typescript-language-server": {
-      "command": ["typescript-language-server", "--stdio"],
+      "command": ["node", ".opencode/init-lsp-wrap.mjs", "typescript-language-server", "--stdio"],
       "extensions": ["ts", "tsx", "js", "jsx"]
     },
     "pyright": {
-      "command": ["pyright-langserver", "--stdio"],
+      "command": ["node", ".opencode/init-lsp-wrap.mjs", "pyright-langserver", "--stdio"],
       "extensions": ["py"]
     },
     "bash-language-server": {
-      "command": ["bash-language-server", "start"],
+      "command": ["node", ".opencode/init-lsp-wrap.mjs", "bash-language-server", "start"],
       "extensions": ["sh", "bash"]
     },
     "rust-analyzer": {
-      "command": ["rust-analyzer"],
+      "command": ["node", ".opencode/init-lsp-wrap.mjs", "rust-analyzer"],
       "extensions": ["rs"]
     },
     "html-language-server": {
-      "command": ["vscode-html-language-server", "--stdio"],
+      "command": ["node", ".opencode/init-lsp-wrap.mjs", "vscode-html-language-server", "--stdio"],
       "extensions": ["html", "htm"]
     },
     "remark-language-server": {
-      "command": ["remark-language-server", "--stdio"],
+      "command": ["node", ".opencode/init-lsp-wrap.mjs", "remark-language-server", "--stdio"],
       "extensions": ["md", "markdown"]
     }
   }

@@ -1,12 +1,12 @@
 # MODACS OpenCode AI 配置使用指南
 
-> 最后更新: 2026-06-29
+> 最后更新: 2026-07-01
 
 ## 一、架构总览
 
 MODACS（Modular Automation & Control System）是一个双栈机器人控制平台：
 1. **C++/Qt/ROS2 侧（MSRCS）**：基于 C++17/Qt5.15/ROS2 Jazzy 的远程遥控站上位机，构建基础设施已就绪
-2. **TypeScript/Node.js 侧（平台）**：规划中的多进程 Web 平台（Hono + React + Drizzle + PostgreSQL），规格见 `docs/` 目录
+2. **TypeScript/Node.js 侧（平台）**：多进程 Web 平台（Hono + React + Drizzle + PostgreSQL），Slice 1 MVP + Debug 模块已完成，规格见 `docs/` 目录
 
 本指南说明 AI agent 如何与 MODACS 开发环境交互。
 
@@ -28,7 +28,7 @@ MODACS（Modular Automation & Control System）是一个双栈机器人控制平
 │  │ (导航)  │  (搜索)  │(探索)  │ (构建)  │ (轻量执行) │  │
 │  └─────────┴──────────┴────────┴───────┴─────────────┘  │
 ├─────────────────────────────────────────────────────────┤
-│  工具层: MCP (qt-docs) + LSP (clangd) + Skills + Commands│
+│  工具层: MCP (qt-docs/codegraph/playwright) + LSP (7 servers) + Skills│
 ├─────────────────────────────────────────────────────────┤
 │  上下文层: 4 memory files + ACP 修剪 + context-mode    │
 └─────────────────────────────────────────────────────────┘
@@ -203,7 +203,7 @@ fast    → fast-1 (qwen3.6-flash)  → fast-2 (doubao-seed-2.0-lite)
 // oh-my-openagent.jsonc
 "team_mode": {
   "enabled": true,
-  "tmux_visualization": true,
+  "tmux_visualization": false,
   "max_parallel_members": 4
 }
 ```
@@ -336,6 +336,8 @@ MODACS 配置的 MCP 服务器：
 |---|---|---|
 | `qt-docs` | `https://qt-docs-mcp.qt.io/mcp` | Qt 官方文档 API 查询（Qt6 文档） |
 | LSP (clangd) | 内置 | C++ 代码补全、诊断、导航 |
+| `codegraph` | 本地 | AI 代码图谱 + 调用链分析（@colbymchenry/codegraph） |
+| `playwright` | 本地 | 浏览器自动化（@playwright/mcp） |
 
 > **提示**: `qt-docs` MCP 用于查询 Qt API 文档。对于 C++ 代码分析和导航，使用 clangd LSP。
 
@@ -450,7 +452,7 @@ qt-cpp-review 审查 → archive → finish
 
 ## 七、Qt 技能使用指南
 
-> **范围说明**: 以下 Qt 技能适用于 MODACS 的 C++/Qt 侧（MSRCS 远程遥控站），不适用于规划中的 TypeScript/Node.js 平台侧。
+> **范围说明**: 以下 Qt 技能仅适用于 MODACS 的 C++/Qt 侧（MSRCS 远程遥控站），不适用于 TypeScript/Node.js 平台侧（Slice 1 MVP + Debug 模块已完成）。
 
 MODACS 安装了 7 个 Qt 官方技能，目录 `.agents/skills/`：
 
@@ -763,7 +765,7 @@ OpenCode 已配置自动加载全部 4 个文件（通过 `opencode.json` 的 `i
 4. **禁止**: AI 自动 git commit 或修改 `version.txt`
 5. **提交前**: 须征得用户同意
 
-> **项目状态**: MODACS 仓库已初始化但暂无 git commit，所有文件处于未跟踪状态。使用标准 Conventional Commits 格式。
+> **项目状态**: MODACS 仓库已有 43 次提交（Conventional Commits 格式），apps/debug/ 为未跟踪状态。
 
 ### 11.6 文档编写风格
 
@@ -782,7 +784,7 @@ OpenCode 已配置自动加载全部 4 个文件（通过 `opencode.json` 的 `i
 | OMO 配置 | `.opencode/oh-my-openagent.jsonc` | Agent 模型、fallback、team mode |
 | 系统配置 | `~/.config/opencode/opencode.jsonc` | API Key、Provider、模型别名 |
 | TUI 配置 | `~/.config/opencode/tui.json` | 桌面通知（attention.enabled） |
-| 模型层级 | `MODEL_TIERS.md` | 5 层模型映射参考（已创建） |
+|| 模型层级 | `agent-model-tiers.md` | 5 层模型映射参考（已创建） |
 | 记忆文件 | `.agents/memorys/*.md` | status/conventions/decisions/pitfalls |
 | 规则文件 | `.agents/rules/*.md` | 编码风格、安全规则 |
 | Qt 技能 | `.agents/skills/qt-*.md` | Qt C++/QML 开发技能 |
