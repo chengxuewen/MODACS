@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx apps/server/src/main.ts",
     "build": "node esbuild.config.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit && tsc --noEmit -p apps/debug/tsconfig.json"
   },
   "dependencies": {
     "@foxglove/schemas": "^2.1.0",
@@ -18,6 +18,8 @@
     "ws": "^8.18.0"
   },
   "devDependencies": {
+    "@colbymchenry/codegraph": "^1.1.6",
+    "@playwright/mcp": "^0.0.77",
     "@types/node": "^22.0.0",
     "@types/ws": "^8.5.0",
     "esbuild": "^0.24.0",
