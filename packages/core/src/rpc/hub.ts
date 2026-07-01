@@ -32,6 +32,7 @@ interface Hub {
   onCall(callback: CallHook): void;
   onResult(callback: ResultHook): void;
   topicBus: TopicBus;
+  getPlugins(): { name: string; socketPath: string }[];
   /**
    * Subscribe a plugin to a topic. When the topic fires, hub sends a
    * `topic:event` JSON-RPC notification to the plugin via UDS.
@@ -171,8 +172,17 @@ function createHub(existingTopicBus?: TopicBus): Hub {
     logger.info('Plugin subscribed to topic', { pluginName, topic });
     return unsub;
   }
-
-  return { registerPlugin, unregisterPlugin, call, broadcast, onCall, onResult, topicBus, subscribeForPlugin };
+  return {
+    registerPlugin,
+    unregisterPlugin,
+    call,
+    broadcast,
+    onCall,
+    onResult,
+    topicBus,
+    subscribeForPlugin,
+    getPlugins: () => [...plugins.entries()].map(([name, socketPath]) => ({ name, socketPath })),
+  };
 }
 
 export { createHub, type Hub, type CallHook, type ResultHook };

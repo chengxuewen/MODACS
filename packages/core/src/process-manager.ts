@@ -18,10 +18,19 @@ export interface ManagedProcess {
   kill(signal?: NodeJS.Signals): void;
 }
 
+export interface ProcessInfo {
+  name: string;
+  pid: number | null;
+  status: 'running' | 'stopped' | 'restarting';
+  uptime: number;
+  restartCount: number;
+}
+
 interface ProcessRecord {
   scriptPath: string;
   env?: Record<string, string>;
   restartCount: number;
+  startTime: number;
   killed: boolean;
   exitCallbacks: ExitCallback[];
 }
@@ -47,7 +56,7 @@ export function killAllChildren(): void {
 }
 
 export function spawn(scriptPath: string, env?: Record<string, string>): ManagedProcess {
-  const record: ProcessRecord = { scriptPath, env, restartCount: 0, killed: false, exitCallbacks: [] };
+  const record: ProcessRecord = { scriptPath, env, restartCount: 0, startTime: Date.now(), killed: false, exitCallbacks: [] };
   const mergedEnv = env ? { ...process.env, ...env } : undefined;
   const forkOptions = mergedEnv ? { env: mergedEnv } : undefined;
   let currentPid = 0;
@@ -56,6 +65,7 @@ export function spawn(scriptPath: string, env?: Record<string, string>): Managed
   function doRespawn(newChild: ChildProcess): void {
     currentPid = newChild.pid!;
     records.set(currentPid, record);
+    record.startTime = Date.now();
     children.set(currentPid, newChild);
     newChild.on('exit', handleExit);
     if (stableTimer) clearTimeout(stableTimer);
@@ -94,5 +104,21 @@ export function spawn(scriptPath: string, env?: Record<string, string>): Managed
       record.killed = true;
       children.get(currentPid)?.kill(signal ?? 'SIGTERM');
     },
-  };
+};
+}
+
+export function getProcessList(): ProcessInfo[] {
+  const results: ProcessInfo[] = [];
+  for (const [pid, record] of records) {
+    const child = children.get(pid);
+    const now = Date.now();
+    results.push({
+      name: record.scriptPath,
+      pid: child?.pid ?? null,
+      status: child && child.exitCode === null ? 'running' : 'stopped',
+      uptime: Math.floor((now - record.startTime) / 1000),
+      restartCount: record.restartCount,
+    });
+  }
+  return results;
 }

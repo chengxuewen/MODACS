@@ -24,11 +24,12 @@ const POLL_INTERVAL_MS = 1000;
 
 interface FoxgloveBridge {
   broadcast(): void;
+  getStatus(): { active: boolean; port: number; clients: number };
   close(): void;
 }
 
 function createNoopBridge(): FoxgloveBridge {
-  return { broadcast: () => {}, close: () => {} };
+  return { broadcast: () => {}, getStatus: () => ({ active: false, port: 0, clients: 0 }), close: () => {} };
 }
 
 function createBridge(topicBus?: TopicBus, port: number = DEFAULT_PORT): FoxgloveBridge {
@@ -194,6 +195,7 @@ function createBridge(topicBus?: TopicBus, port: number = DEFAULT_PORT): Foxglov
     broadcast(): void {
       // No-op — message delivery is handled by FoxgloveServer via TopicBus subscriptions.
     },
+    getStatus: () => ({ active: wss !== null, port, clients: wss?.clients.size ?? 0 }),
     close(): void {
       if (pollTimer) {
         clearInterval(pollTimer);

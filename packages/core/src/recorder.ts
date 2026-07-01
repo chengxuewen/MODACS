@@ -1,7 +1,7 @@
 /** MCAP multi-topic recorder — records topic bus data to MCAP format for Foxglove replay. */
 
 import { McapWriter, type IWritable } from '@mcap/core';
-import { mkdirSync, promises as fs } from 'node:fs';
+import { mkdirSync, readdirSync, statSync, promises as fs } from 'node:fs';
 import type { FileHandle } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createLogger, type Logger } from './logger.ts';
@@ -22,6 +22,8 @@ interface QueuedMessage {
 export interface Recorder {
   /** Manually record data for a topic. Primary recording is via TopicBus subscription. */
   record(topic: string, data: unknown): void;
+  getStatus(): { active: boolean; filename: string; messages: number; channels: number };
+  listRecordings(): { filename: string; size: number; created: string }[];
   close(): Promise<void>;
 }
 
@@ -177,6 +179,32 @@ export function createRecorder(dir: string, topicBus?: TopicBus): Recorder {
     }
     log.info('MCAP recording closed', { filename, messages: sequence, channels: topicChannels.size });
   }
-
-  return { record, close };
+  return {
+    record,
+    close,
+    getStatus: () => ({
+      active: !closed && !initFailed,
+      filename,
+      messages: sequence,
+      channels: topicChannels.size,
+    }),
+    listRecordings: () => {
+      try {
+        const files = readdirSync(dir);
+        return files
+          .filter((f) => f.endsWith('.mcap'))
+          .map((f) => {
+            const filePath = join(dir, f);
+            const stat = statSync(filePath);
+            return {
+              filename: f,
+              size: stat.size,
+              created: stat.birthtime.toISOString(),
+            };
+          });
+      } catch {
+        return [];
+      }
+    },
+  };
 }
