@@ -1,0 +1,35 @@
+{
+  "name": "@modacs/debug",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 5173",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@radix-ui/react-checkbox": "^1.3.6",
+    "@radix-ui/react-label": "^2.1.11",
+    "@tanstack/react-query": "^5.62.0",
+    "@tanstack/react-router": "^1.100.0",
+    "@xyflow/react": "^12.5.0",
+    "dagre": "^0.8.5",
+    "lucide-react": "^1.22.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "recharts": "^2.15.0",
+    "zustand": "^5.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/dagre": "^0.7.54",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.7.0",
+    "vite": "^6.0.0"
+  }
+}

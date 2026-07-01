@@ -1,0 +1,43 @@
+@import 'tailwindcss';
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ReactFlow dark theme controls */
+.react-flow__controls button {
+  background-color: #18181b;
+  border-bottom: 1px solid #27272a;
+  color: #d4d4d8;
+}
+
+.react-flow__controls button:hover {
+  background-color: #27272a;
+}
+
+.react-flow__controls button svg {
+  fill: #d4d4d8;
+  stroke: #d4d4d8;
+}
+
+.react-flow__controls button:hover svg {
+  fill: #fafafa;
+  stroke: #fafafa;
+}
+
+/* MiniMap dark theme */
+.react-flow__minimap {
+  background-color: #09090b;
+}
+
+.react-flow__attribution {
+  background-color: transparent;
+  color: #52525b;
+}
+
+/* Fix: Tailwind overflow:hidden overrides ReactFlow edge SVG */
+.react-flow__edges svg {
+  overflow: visible !important;
+}
+
+/* Ensure edge interaction layer is above nodes */
+.react-flow__edge {
+  pointer-events: all;
+}
